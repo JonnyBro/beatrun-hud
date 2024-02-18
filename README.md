@@ -1,6 +1,6 @@
 # beatrun-ammocounter
 
-My attempt at making an ammo display that works well with Beatrun. *Currently in rewrite, is kind of usable for now.*<br>If it doesn't show up, run the following command in the Developer Console: `lua_openscript_cl autorun\client\ammocounter.lua`
+My attempt at making an ammo display that works well with Beatrun.<br>If it doesn't show up, run the following command in the Console: `lua_openscript_cl autorun\client\ammocounter.lua`
 
 *Now finally automatically loads by default!*
 
@@ -14,7 +14,7 @@ My attempt at making an ammo display that works well with Beatrun. *Currently in
 - Support for mag-less weapons
 
 ## To be done
-Just check the Issues tab, will ya?
+Just check the Issues tab, will ya? *(gonna update to a GitLab pic later on, but for GitLab it's on the sidebar)**
 
 ![image of the Issues tab](images/checkissues.png)
 <br>*No, seriously, check Issues. Please. It saves me so much time.*
