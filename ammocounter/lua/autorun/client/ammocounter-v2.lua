@@ -396,6 +396,10 @@ function PKAD2_GetFiremode()
 	local istfabase = Weapon.IsTFAWeapon
 	ActivePrimaryFire = true
 
+	usekey = input.LookupBinding("+use")
+	attack2 = input.LookupBinding("+attack2")
+	reloadkey = input.LookupBinding("+reload")
+
 	if Weapon:IsScripted() and WepMag2 == -1 then 
 		InstantAltfire = true
 	elseif !Weapon:IsScripted() then 
