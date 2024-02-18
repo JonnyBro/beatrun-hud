@@ -1,0 +1,22 @@
+-- Little garbage stopwatch I made, don't know why it's in this repository but whatever I guess.
+
+--time = 0
+--curtime = CurTime()
+--run = false
+--
+--hook.Add("HUDPaint", "gstime", function()
+--    if run then
+--        time = time + (CurTime() - curtime)
+--        curtime = CurTime()
+--    end
+--    draw.DrawText(string.FormattedTime( time, "%02i:%02i.%02i" ), "DermaLarge", ScrW() * 0.8, ScrH() * 0.2, Color(255,255,255), TEXT_ALIGN_RIGHT)
+--end)
+--
+--concommand.Add("simpletimer_start", function()
+--    run = true
+--    curtime = CurTime()
+--end)
+--concommand.Add("simpletimer_stop", function() run = false end)
+--concommand.Add("simpletimer_reset", function()
+--    time = 0
+--end)
