@@ -4,7 +4,7 @@
 -- This rewrite is meant to make the code more readable than the original was as much as I can,
 -- and make it easier to work with. (also just 635 lines wow)
 
-local hidden = CreateClientConVar("PKAmmoDisp_Hidden", "0", true, false, "Blocks the ammo counter from rendering", 0, 2)
+local hidden = CreateClientConVar("PKAmmoDisp_Hidden", "1", true, false, "Blocks the ammo counter from rendering", 0, 2)
 local sway = CreateClientConVar("PKAmmoDisp_Sway", "1", true, false, "Display HUD swaying", 0, 1)
 local dynamic = CreateClientConVar("PKAmmoDisp_Dynamic", "0", true, false, "Hide HUD when moving (why the frick would you enable this?)", 0, 1)
 local debug = CreateClientConVar("PKAmmoDisp_DebugStuff", "0", true, false, "Some stupid debug stuff I pulled over", 0, 1)
@@ -425,7 +425,6 @@ end, "pkad_fontrescale")
 local hidealpha = 0
 
 local function PKAD_Draw()
-	if CLIENT then return end
 	local usekey = string.upper(string.Replace(input.LookupBinding("+use", 1), "MOUSE", "M"))
 	local attack2 = string.upper(string.Replace(input.LookupBinding("+attack2", 1), "MOUSE", "M"))
 	local reloadkey = string.upper(string.Replace(input.LookupBinding("+reload", 1), "MOUSE", "M"))
