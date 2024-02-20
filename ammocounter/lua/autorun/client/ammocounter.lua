@@ -425,6 +425,7 @@ end, "pkad_fontrescale")
 local hidealpha = 0
 
 local function PKAD_Draw()
+	if hidden:GetBool() then return end
 	local usekey = string.upper(string.Replace(input.LookupBinding("+use", 1), "MOUSE", "M"))
 	local attack2 = string.upper(string.Replace(input.LookupBinding("+attack2", 1), "MOUSE", "M"))
 	local reloadkey = string.upper(string.Replace(input.LookupBinding("+reload", 1), "MOUSE", "M"))
@@ -863,7 +864,7 @@ local function PKAD_Draw()
 		vp.z = 0
 	end
 
-	if ply:Armor() > 0 and !hidden:GetBool() then
+	if ply:Armor() > 0 then
 		surface.SetFont("PKAD_SmallText")
 		local BeatrunOffset = nil 
 		local VertArmorOffset = safezoney
@@ -1002,7 +1003,7 @@ local function PKAD_Draw()
 	local FiremodeW, FiremodeH = surface.GetTextSize(pkad_firemode_text)
 	local AltFiremodeW, AltFiremodeH = surface.GetTextSize(pkad_alt_firemode)
 	
-	if IsValid(Weapon) and ply:IsValid() and ply:Alive() and Weapon:GetPrimaryAmmoType() != -1 and !hidden:GetBool() then
+	if IsValid(Weapon) and ply:IsValid() and ply:Alive() and Weapon:GetPrimaryAmmoType() != -1 then
 		surface.SetDrawColor(corner_color_c)
 		surface.DrawRect(scrw - 18.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 40 * scale, scale * 85)
 		DrawBlurRect2(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.max(255 - hidealpha, 2))
