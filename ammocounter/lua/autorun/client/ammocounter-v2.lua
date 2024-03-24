@@ -413,7 +413,7 @@ function GetCWFiremodeName()
 
 	if Weapon:GetBuff_Hook("Hook_FiremodeName") then return Weapon:GetBuff_Hook("Hook_FiremodeName") end
 	
-	local abbrev = GetConVar("arccw_hud_fcgabbrev"):GetBool() and ".abbrev" or ""
+	--local abbrev = GetConVar("arccw_hud_fcgabbrev"):GetBool() and ".abbrev" or ""
 
 	--if Weapon:GetInUBGL() then
 	--	ActivePrimaryFire = false
@@ -423,7 +423,7 @@ function GetCWFiremodeName()
 
 	if fm.PrintName then
 		local phrase = ArcCW.GetPhraseFromString(fm.PrintName)
-		return phrase and ArcCW.GetTranslation(phrase .. abbrev) or ArcCW.TryTranslation(fm.PrintName)
+		return phrase and ArcCW.GetTranslation(phrase) or ArcCW.TryTranslation(fm.PrintName)
 	end
 
 	local mode = fm.Mode
@@ -527,7 +527,7 @@ function PKAD2_GetFiremode()
 	elseif Weapon.ArcCW then
 		local arccw_mode = Weapon:GetCurrentFiremode()
 
-		AltFiremodeText = Weapon:GetBuff_Override("UBGL_PrintName") and Weapon:GetBuff_Override("UBGL_PrintName") or ArcCW.GetTranslation("fcg.ubgl" .. abbrev)
+		AltFiremodeText = Weapon:GetBuff_Override("UBGL_PrintName") and Weapon:GetBuff_Override("UBGL_PrintName") or ArcCW.GetTranslation("fcg.ubgl")
 		
 		if Weapon:GetInUBGL() then
 			ActivePrimaryFire = false
@@ -822,7 +822,7 @@ function PKAD2_AmmoPanels()
 			surface.SetTextColor(AlternateAmmoColor)
 			surface.SetFont("PKAD_SmallText")
 			surface.SetTextPos(scrw - 26.88 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(pkad_firemode_text)
+			surface.DrawText(FiremodeText)
 		end
 
 		if HasAltFire and InstantAltfire then
