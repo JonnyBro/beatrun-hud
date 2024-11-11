@@ -22,5 +22,6 @@ Just check the Issues tab, will ya? *(gonna update to a GitLab pic later on, but
 <br>*No, seriously, check Issues. Please. It saves me so much time.*
 
 ## Credits
+- ...whoever created the `x14y24pxHeadUpDaisy` font, which is used in this HUD. I tried searching for the original site but couldn't find it. If you could, let me know.
 - [datæ](https://steamcommunity.com/id/75651121243836): the *original, **possibly malicious*** Beatrun gamemode
 - [Arctic](https://github.com/haodongmo): some used ARC9 code for determining melee weapons
