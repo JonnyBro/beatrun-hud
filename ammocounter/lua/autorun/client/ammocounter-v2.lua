@@ -1,124 +1,5 @@
 -- i forgot to do git push last time lmfao, anyway here we go
 
-local TFAModeKeys = {
-	[0] = "",
-	[1] = "0", 
-	[2] = "1",
-	[3] = "2",
-	[4] = "3", 
-	[5] = "4",
-	[6] = "5",
-	[7] = "6", 
-	[8] = "7",
-	[9] = "8",
-	[10] = "9", 
-	[11] = "A",
-	[12] = "B",
-	[13] = "C", 
-	[14] = "D",
-	[15] = "E",
-	[16] = "F", 
-	[17] = "G",
-	[18] = "H",
-	[19] = "I", 
-	[20] = "J",
-	[21] = "K",
-	[22] = "L", 
-	[23] = "M",
-	[24] = "N",
-	[25] = "O", 
-	[26] = "P",
-	[27] = "Q",
-	[28] = "R", 
-	[29] = "S",
-	[30] = "T",
-	[31] = "U", 
-	[32] = "V",
-	[33] = "W",
-	[34] = "X", 
-	[35] = "Y",
-	[36] = "Z",
-	[37] = "NPAD 0",
-	[38] = "NPAD 1", 
-	[39] = "NPAD 2",
-	[40] = "NPAD 3",
-	[41] = "NPAD 4", 
-	[42] = "NPAD 5",
-	[43] = "NPAD 6",
-	[44] = "NPAD 7", 
-	[45] = "NPAD 8",
-	[46] = "NPAD 9",
-	[47] = "NPAD /", 
-	[48] = "NPAD *",
-	[49] = "NPAD -",
-	[50] = "NPAD +", 
-	[51] = "NPAD ENTER",
-	[52] = "NPAD .",
-	[53] = "(", 
-	[54] = ")",
-	[55] = ";",
-	[56] = "'", 
-	[57] = "`",
-	[58] = ",",
-	[59] = ".", 
-	[60] = "/",
-	[61] = "\\",
-	[62] = "-", 
-	[63] = "=",
-	[64] = "ENTER",
-	[65] = "SPACE", 
-	[66] = "BKSPC",
-	[67] = "TAB",
-	[68] = "CAPSLOCK", 
-	[69] = "NUMLOCK",
-	[70] = "ESCAPE",
-	[71] = "SCRLOCK", 
-	[72] = "INS",
-	[73] = "DEL",
-	[74] = "HOME", 
-	[75] = "END",
-	[76] = "PGUP",
-	[77] = "PGDN", 
-	[78] = "PAUSE",
-	[79] = "LSHFT",
-	[80] = "RSHFT", 
-	[81] = "LALT",
-	[82] = "RALT",
-	[83] = "LCTRL", 
-	-- 84 and 85 needs special Linux and macOS cases. Mac keyboards have Command and Linux uses "Menu", though I haven't see a dedicated
-	-- Linux Menu key on any keyboard in my life yet.
-	[84] = "RCTRL",
-	[85] = "LWIN",
-	[86] = "RWIN", 
-	[87] = "APP",
-	[88] = "UARRW",
-	[89] = "LARRW", 
-	[90] = "DARRW",
-	[91] = "RARRW",
-	[92] = "F1",
-	[93] = "F2",
-	[94] = "F3",
-	[95] = "F4", 
-	[96] = "F5",
-	[97] = "F6",
-	[98] = "F7", 
-	[99] = "F8",
-	[100] = "F9",
-	[101] = "F10", 
-	[102] = "F11",
-	[103] = "F12",
-	[104] = "CLOCKTGGL", 
-	[105] = "NLOCKTGGL",
-	[106] = "SLOCKTGGL",
-	[107] = "M1", 
-	[108] = "M2",
-	[109] = "M3",
-	[110] = "M4", 
-	[111] = "M5",
-	[112] = "MWUP",
-	[113] = "MWDN"
-}
-
 local CPPAltfireWeps = {
 	["Weapon_smg1"] = true,
 	["Weapon_ar2"] = true,
@@ -181,7 +62,11 @@ local ActivePrimaryFire = true
 local InstantAltfire = false
 local BottomlessMag = false
 
--- don't get fooled, these are CurTime()!!!
+local ismgbase = false
+local isarc9 = false
+local isweparccw = false
+local istfabase = false
+
 local LastLowAmmoFrame = 0
 local LastLowReserveFrame = 0
 local CurrentlyLowAmmo = false 
@@ -220,7 +105,7 @@ local altammolowpulsecolor = Color(255,0,0,230)
 local altreservelowpulsecolor = Color(255,0,0,230)
 
 -- Variables: Textures and the like
-local blur = Material("pp/blurscreen")
+local blurtex = Material("pp/blurscreen")
 
 local ARC9Installed = false
 local ArcCWInstalled = false
@@ -229,7 +114,7 @@ local TFAInstalled = false
 local hide = {
     CHudBattery = GetConVar("PKAD_Hidden"):GetBool(),
     CHudAmmo = true,
-    CHudWepClip2 = true
+    CHudSecondaryAmmo = true
 }
 
 -- Functions.
@@ -244,12 +129,12 @@ local function DrawBlurRect2(x, y, w, h, a, f) -- NEW: f is intensity. Adjust by
 		if f != nil then intensity = f end
 		
 		surface.SetDrawColor(255, 255, 255, a)
-		surface.SetMaterial(blur)
+		surface.SetMaterial(blurtex)
 		
 		for i = 1, 2 do
 			--blur:SetFloat("$blur", i / 3 * 5)
-			blur:SetFloat("$blur", i / 12 * intensity)
-			blur:Recompute()
+			blurtex:SetFloat("$blur", i / 12 * intensity)
+			blurtex:Recompute()
 			
 			render.UpdateScreenEffectTexture()
 			render.SetScissorRect(x, y, x + w, y + h, true)
@@ -458,8 +343,17 @@ function PKAD2_GetWeaponData()
 	OverfillRatio = math.Clamp(Weapon:Clip1() - WepClip1, 0, 2147483647) / WepClip1
 	AltOverfillRatio = math.Clamp(Weapon:Clip2() - WepClip2, 0, 2147483647) / WepClip2
 
+	BottomlessMag = false
+	InstantAltfire = false
+
+	ismgbase = weapons.IsBasedOn(Weapon:GetClass(), "mg_base")
+	isarc9 = Weapon.ARC9
+	isweparccw = Weapon.ArcCW
+	istfabase = Weapon.IsTFAWeapon
+
 	-- Bottomless clip detection. Same as infinite ammo detection.
-	if isarc9 and Weapon:GetProcessedValue("BottomlessClip", true) then
+	if isarc9 then
+		if !Weapon:GetProcessedValue("BottomlessClip", true) then return end
 		BottomlessMag = true
 		InstantAltfire = true
 	elseif isweparccw and GetConVar("arccw_mult_bottomlessclip"):GetBool() then
@@ -468,17 +362,10 @@ function PKAD2_GetWeaponData()
 		-- For some inexplicable reason altfire for ArcCW is NOT affected by its bottomless clip CVar.
 	elseif !isarc9 and !isweparccw and Weapon:GetMaxClip1() == -1 then
 		BottomlessMag = true
-	else
-		BottomlessMag = false
 	end
 end
 
 function PKAD2_GetFiremode()
-	local ismgbase = false
-	local isarc9 = Weapon.ARC9
-	local inarc9cust = isarc9 and Weapon:GetCustomize()
-	local isweparccw = Weapon.ArcCW
-	local istfabase = Weapon.IsTFAWeapon
 	ActivePrimaryFire = true
 
 	usekey = string.Replace(input.LookupBinding("+use"), "MOUSE", "M")
@@ -491,12 +378,6 @@ function PKAD2_GetFiremode()
 		InstantAltfire = true
 	else
 		InstantAltfire = false
-	end
-
-	if weapons.IsBasedOn(Weapon:GetClass(), "mg_base") then -- I have ZERO other fucking clue as to how to detect MW Base as it's barely documented.
-		ismgbase = true
-	else
-		ismgbase = false
 	end
 
 	if isarc9 then -- Biggest blunder ever: forgor to change a9 to isarc9. bruh.
@@ -727,6 +608,23 @@ function PKAD2_AmmoPanels()
 	local safezonex = scrw * deadzonex:GetFloat()
 	local safezoney = scrh * deadzoney:GetFloat()
 
+	local InfiniteReserve = false
+
+	-- Infinite ammo detection. Works for ARC9 and ArcCW.
+	if isarc9 and (Weapon:GetInfiniteAmmo() or GetConVar("arc9_infinite_ammo"):GetBool()) then
+		InfiniteReserve = true
+	elseif isweparccw and GetConVar("arccw_mult_infiniteammo"):GetBool() then
+		InfiniteReserve = true
+	end
+
+	if InfiniteReserve and BottomlessMag then
+		WepReserve1 = "∞"
+		WepReserve2 = !isweparccw and "∞" or WepReserve2
+	elseif InfiniteReserve then
+		WepReserve1 = "inf"
+		WepReserve2 = !isweparccw and "inf" or WepReserve2
+	end
+
 	surface.SetFont("PKAD_SmallText")
 	local FiremodeW, FiremodeH = surface.GetTextSize(FiremodeText)
 	local AltFiremodeW, AltFiremodeH = surface.GetTextSize(AltFiremodeText)
@@ -734,12 +632,17 @@ function PKAD2_AmmoPanels()
 	if IsValid(Weapon) and ply:IsValid() and ply:Alive() and Weapon:GetPrimaryAmmoType() != -1 and !hidden:GetBool() then
 		surface.SetDrawColor(corner_color_c)
 		surface.DrawRect(scrw - 18.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 40 * scale, scale * 85)
+
+		if WepClip1 < WepMag1 / 3 then
+			surface.SetDrawColor(ammolowpulsecolor)
+			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
+		end
 		DrawBlurRect2(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.max(255 - hidealpha, 2))
 		surface.SetDrawColor(corner_color_c)
 		surface.DrawOutlinedRect(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.Clamp(scale, 1, 32767))
+		local OverflowText = ""
 
 		if !BottomlessMag then
-			local OverflowText = ""
 			if OverCapacity > 0 then
 				OverflowText = "+" .. OverCapacity
 			end
@@ -774,16 +677,9 @@ function PKAD2_AmmoPanels()
 			surface.SetTextColor(MagazineColor)
 			surface.DrawText(WepClip1)
 
-			if WepClip1 < WepMag1 / 3 and WepClip1 != 0 then
-				surface.SetDrawColor(ammolowpulsecolor)
-				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
-				DrawBlurRect2(scrw - 201.64 * scale + vp.z - safezonex, scrh - 75.96 * scale + vp.x - safezoney, 75 * scale, scale * 24, 255)
-				surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)
-				surface.DrawRect(scrw - 26.64 * scale - 150 * scale * (1 - MagFillRatio) + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale - 150 * scale * MagFillRatio, scale * 2.55)
-			else
-				surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)
-				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 2.55)	
-			end
+			surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)
+			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 2.55)	
+
 			surface.SetDrawColor(MagBarColor)
 			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
 			surface.SetDrawColor(255, 225, 0, ammobarcolor.a)
@@ -801,20 +697,23 @@ function PKAD2_AmmoPanels()
 			surface.SetTextPos(scrw - 28 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
 			surface.DrawText(string.upper(FiremodeText))
 		elseif BottomlessMag then
-			if WepReserve1 + math.Clamp(WepClip1, 0, 9999) == 0 then
+			surface.SetFont("PKAD_BiggerText")
+			local MagazineW, MagazineH = surface.GetTextSize(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
+
+			if !InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999) == 0) then
 				local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
 				surface.SetFont("PKAD_BlurredBigText")
-				local Reserve1W, Reserve1H = surface.GetTextSize("/" .. WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+				local Reserve1W, Reserve1H = surface.GetTextSize(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
 				surface.SetTextColor(reservelowpulsecolor)
-				surface.SetTextPos(scrw - 26.88 * scale - Reserve1W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-				surface.DrawText("/" .. WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+				surface.SetTextPos(scrw * 0.986 - MagazineW + vp.z - safezonex, scrh - 106 * scale + vp.x - safezoney)
+				surface.DrawText(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
 			end
-			
+
 			surface.SetFont("PKAD_BiggerText")
-			local MagazineW, MagazineH = surface.GetTextSize(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+
 			surface.SetTextPos(scrw * 0.986 - MagazineW + vp.z - safezonex, scrh - 106 * scale + vp.x - safezoney)
 			surface.SetTextColor(MagazineColor)
-			surface.DrawText(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+			surface.DrawText(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
 			
 			surface.SetDrawColor(MagBarColor)
 			surface.DrawRect(scrw * 0.908 + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 5)
@@ -822,7 +721,7 @@ function PKAD2_AmmoPanels()
 			surface.SetTextColor(AlternateAmmoColor)
 			surface.SetFont("PKAD_SmallText")
 			surface.SetTextPos(scrw - 26.88 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(FiremodeText)
+			surface.DrawText(string.upper(FiremodeText))
 		end
 
 		if HasAltFire and InstantAltfire then
@@ -918,7 +817,6 @@ hook.Add("HUDPaint", "PKAD2_Draw", function()
 	PKAD2_GetFiremode()
 	PKAD2_ColorManager()
 	PKAD2_AmmoPanels()
-	--print(FiremodeText)
 end)
 
 concommand.Add("PKAD_ReloadFonts", PKAD2_InitFonts())
