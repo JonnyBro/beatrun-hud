@@ -126,16 +126,16 @@ local CPPAltfireWeps = {
 }  
 
 local MWBaseFiremodes = {
-    ["AUTOMATIC"] = "Full-Auto", 
-	["FULL AUTO"] = "Full-Auto",
-	["SEMI AUTO"] = "Semi-Auto",
-	["SEMI AUTOMATIC"] = "Semi-Auto",
+    ["AUTOMATIC"] = "Auto", 
+	["FULL AUTO"] = "Auto",
+	["SEMI AUTO"] = "Single",
+	["SEMI AUTOMATIC"] = "Single",
 	["3RND BURST"] = "3-Burst"
 }
 
 local TFAFiremodes = {
-    ["Full-Auto"] = "Full-Auto", 
-	["Semi-Auto"] = "Semi-Auto",
+    ["Full-Auto"] = "Auto", 
+	["Semi-Auto"] = "Single",
 	["3 Round Burst"] = "3-Burst"
 }
 
@@ -152,6 +152,7 @@ local hidden = CreateClientConVar("PKAD_Hidden", "0", true, false, "Blocks the a
 local sway = CreateClientConVar("PKAD_Sway", "1", true, false, "Display HUD swaying", 0, 1)
 local dynamic = CreateClientConVar("PKAD_Dynamic", "0", true, false, "Hide HUD when moving (why the frick would you enable this?)", 0, 1)
 local UserScale = CreateClientConVar("PKAD_Scale", "1", true, false, "Define your own scaling!")
+local blur = CreateClientConVar("PKAD_NoBlur", "1", true, false, "Define your own scaling!")
 local playername = ""
 local ply = nil
 local scale = ScrH() / 1080 * UserScale:GetFloat()
@@ -233,7 +234,7 @@ local hide = {
 
 -- Functions.
 local function DrawBlurRect2(x, y, w, h, a, f) -- NEW: f is intensity. Adjust by multiples of 5.
-	if render.GetDXLevel() < 90 or GetConVar("PKAmmoDisp_NoBlur"):GetBool() then
+	if render.GetDXLevel() < 90 or !blur:GetBool() then
 		surface.SetDrawColor(80,80,80,50)
 		surface.DrawRect(x,y,w,h)
 	else
@@ -258,7 +259,7 @@ local function DrawBlurRect2(x, y, w, h, a, f) -- NEW: f is intensity. Adjust by
 			render.SetScissorRect(0, 0, 0, 0, false)
 		end
 
-		BlurTintColor = string.ToColor(LocalPlayer():GetInfo("PKAmmoDisp_BlurTintColor"))
+		BlurTintColor = string.ToColor(LocalPlayer():GetInfo("PKAD_BlurTintColor"))
 		BlurTintColor.a = dynamic:GetBool() and math.max(50 - hidealpha, 0) or BlurTintColor.a
 		surface.SetDrawColor(BlurTintColor)
 		surface.DrawRect(x,y,w,h)
@@ -381,7 +382,6 @@ function GetA9FiremodeName()
 
 	if Weapon:GetUBGL() then
 		ActivePrimaryFire = false
-	else
 	end
 	
 	local arc9_mode = Weapon:GetCurrentFiremodeTable()
@@ -391,11 +391,11 @@ function GetA9FiremodeName()
 		FiremodeText = arc9_mode.PrintName
 	else
 		if arc9_mode.Mode == 1 then
-			FiremodeText = "Semi-Auto"
+			FiremodeText = "Single"
 		elseif arc9_mode.Mode == 0 then
 			FiremodeText = "Safety"
 		elseif arc9_mode.Mode < 0 then
-			FiremodeText = "Full-Auto"
+			FiremodeText = "Auto"
 		elseif arc9_mode.Mode > 1 then
 			FiremodeText = tostring(arc9_mode.Mode) .. "-Burst"
 		end
@@ -428,8 +428,8 @@ function GetCWFiremodeName()
 
 	local mode = fm.Mode
 	if mode == 0 then return "Safety" end
-	if mode == 1 then return "Semi-Auto" end
-	if mode >= 2 then return "Full-Auto" end
+	if mode == 1 then return "Single" end
+	if mode >= 2 then return "Auto" end
 	if mode < 0 then return tostring(-mode) .. "-Burst" end
 end
 
@@ -615,11 +615,11 @@ function PKAD2_ColorManager()
 	else
 		hidealpha = 0
 	end
-	corner_color_c = string.ToColor(LocalPlayer():GetInfo("PKAmmoDisp_CornerColor"))
-	text_color = string.ToColor(LocalPlayer():GetInfo("PKAmmoDisp_TextColor"))
+	corner_color_c = string.ToColor(LocalPlayer():GetInfo("PKAD_CornerColor"))
+	text_color = string.ToColor(LocalPlayer():GetInfo("PKAD_TextColor"))
 	otherammocolor = string.ToColor("153 153 153 255")
 	othertext = string.ToColor("255 255 255 255")
-	ammobarcolor = string.ToColor(LocalPlayer():GetInfo("PKAmmoDisp_AmmobarColor")), math.max(255 - hidealpha, 2)
+	ammobarcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_AmmobarColor")), math.max(255 - hidealpha, 2)
 	armorbackground = string.ToColor("110 110 110 128")
 	ammolowcolor = string.ToColor("255 0 0 230")
 	ammolowcolor1 = string.ToColor("100 50 50 100")
