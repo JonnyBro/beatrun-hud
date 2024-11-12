@@ -262,7 +262,7 @@ function PKAD2_InitFonts()
 	})
 end
 
-function GetA9FiremodeName()
+function FindA9Firemode()
 	AltFiremodeText = Weapon:GetProcessedValue("UBGLFiremodeName")
 
 	if Weapon:GetUBGL() then
@@ -292,7 +292,7 @@ function GetA9FiremodeName()
 	
 	return FiremodeText
 end
-function GetCWFiremodeName()
+function FindArcCWFiremode()
 	if Weapon:GetInUBGL() then return end
 	--AltFiremodeText = Weapon:GetBuff_Override("UBGL_PrintName") and Weapon:GetBuff_Override("UBGL_PrintName") or ArcCW.GetTranslation("fcg.ubgl" .. abbrev)
 
@@ -383,7 +383,7 @@ function PKAD2_GetFiremode()
 	if isarc9 then -- Biggest blunder ever: forgor to change a9 to isarc9. bruh.
 		local arc9_mode = Weapon:GetCurrentFiremodeTable()
 		
-		FiremodeText = GetA9FiremodeName()
+		FiremodeText = FindA9Firemode()
 		
 		if Weapon:GetUBGL() then
 			--arc9_mode = {
@@ -413,7 +413,7 @@ function PKAD2_GetFiremode()
 		if Weapon:GetInUBGL() then
 			ActivePrimaryFire = false
 		else
-			FiremodeText = GetCWFiremodeName()
+			FiremodeText = FindArcCWFiremode()
 		end
 		
 		if string.match(FiremodeText, "-round burst") then
@@ -479,11 +479,11 @@ function PKAD2_GetFiremode()
 
 	if !isarc9 and !Weapon.ArcCW then AltFiremodeText = "Altfire" end
 
-	if isarc9 and !IsInputBound("+arc9_ubgl") then
+	if isarc9 and !input.LookupBinding("+arc9_ubgl") then
 		ubglkey = "[" .. usekey .."]+" .. "[" .. attack2 .. "]"
-	elseif isarc9 and IsInputBound("+arc9_ubgl") then
+	elseif isarc9 and input.LookupBinding("+arc9_ubgl") then
 		ubglkey = "[" .. string.upper(input.LookupBinding("+arc9_ubgl", 1)) .. "]"
-	elseif isweparccw and IsInputBound("arccw_toggle_ubgl") then
+	elseif isweparccw and input.LookupBinding("arccw_toggle_ubgl") then
 		ubglkey = "[" .. string.upper(input.LookupBinding("arccw_toggle_ubgl", 1)) .. "]"
 	elseif isweparccw then
 		ubglkey = "[" .. usekey .."]+" .. "[" .. reloadkey .. "]"

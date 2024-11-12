@@ -6,8 +6,6 @@ local showspeed = CreateClientConVar("PKAmmoDisp_Speedometer", "0", true, false,
 local ProcessFiremode = CreateClientConVar("PKAmmoDisp_ProcessFiremode", "0", true, false, "Process the firemode before displaying. I do not recommend using this./n FUN FACT: It appears you can't directly get what firemode you're using for ArcCW weapons, so this WAS used for consistency.", 0, 1)
 local PerfDisplay = CreateClientConVar("PKAmmoDisp_PerfDisplay", "1", true, false, "Displays some miscellaneous stuff on your monitor/game window's top right.")
 local NoBlur = CreateClientConVar("PKAmmoDisp_NoBlur", "0", true, false, "Disables blur effects. Only works on DX9+ (Windows) and Linux, as blur doesn't work with DX8 and below. Gives like 2fps or something. Does not affect Beatrun.")
---CreateClientConVar("PKAmmoDisp_DeadzoneX", "0", true, false, "Use this HUD while playing on your HDTV!", 0, 0.5)
---CreateClientConVar("PKAmmoDisp_DeadzoneY", "0", true, false, "Use this HUD while playing on your HDTV!", 0, 0.5)
 
 local scale = ScrH() / 1080
 local framerate = 0
@@ -1206,12 +1204,12 @@ local DispSegments = { -- Element alighment helpers, used while debugging
     "0.95",
 }
 
-local debug = CreateClientConVar("PKAmmoDisp_Debug", "0", true, false, "Enable some debugging functions\nWARNING: Will cause a lot of Lua errors on death.", 0, 1)
+local debugtoggle = CreateClientConVar("PKAmmoDisp_Debug", "0", true, false, "Enable some debugging functions\nWARNING: Will cause a lot of Lua errors on death.", 0, 1)
 
-hook.Add( "HUDPaint", "drawsegment", function( name )
+hook.Add("HUDPaint", "drawsegment", function( name )
     local scale = ScrH() / 1080
 
-    if debug:GetBool() then
+    if debugtoggle:GetBool() then
         local weapon = LocalPlayer():GetActiveWeapon()
         local ammo1, ammo1mag, ammo2, ammo2mag, hasSecondaryAmmoType = -1, -1, -1, -1, false;
         for i=1,#DispSegments do
@@ -1235,4 +1233,4 @@ hook.Add( "HUDPaint", "drawsegment", function( name )
         surface.SetFont("funnitexttiny")
         surface.DrawText("DEBUG: SecondaryAmmoType: " .. weapon:GetSecondaryAmmoType())
     end
-end )
+end)
