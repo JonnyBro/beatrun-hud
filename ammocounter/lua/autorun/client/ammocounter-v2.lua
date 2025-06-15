@@ -813,10 +813,11 @@ PKAD2_InitFonts() -- Prevents Lua errors (maybe)
 hook.Add("HUDPaint", "PKAD2_Draw", function()
 	PKAD2_GetWeaponData()
 
-	if !IsValid(Weapon) then return end
-	PKAD2_GetFiremode()
-	PKAD2_ColorManager()
-	PKAD2_AmmoPanels()
+	if IsValid(Weapon) then
+		PKAD2_GetFiremode()
+		PKAD2_ColorManager()
+		PKAD2_AmmoPanels()
+	end
 end)
 
 concommand.Add("PKAD_ReloadFonts", PKAD2_InitFonts())
