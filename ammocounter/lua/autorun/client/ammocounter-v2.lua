@@ -152,7 +152,7 @@ local function DrawBlurRect2(x, y, w, h, a, f) -- NEW: f is intensity. Adjust by
 	end
 end
 
-function PKAD2_InitFonts()
+local function PKAD2_InitFonts()
 	surface.CreateFont("PKAD_BigText", {
 		shadow = true,
 		blursize = 0,
@@ -262,7 +262,7 @@ function PKAD2_InitFonts()
 	})
 end
 
-function FindA9Firemode()
+local function FindA9Firemode()
 	AltFiremodeText = Weapon:GetProcessedValue("UBGLFiremodeName")
 
 	if Weapon:GetUBGL() then
@@ -292,7 +292,8 @@ function FindA9Firemode()
 	
 	return FiremodeText
 end
-function FindArcCWFiremode()
+
+local function FindArcCWFiremode()
 	if Weapon:GetInUBGL() then return end
 	--AltFiremodeText = Weapon:GetBuff_Override("UBGL_PrintName") and Weapon:GetBuff_Override("UBGL_PrintName") or ArcCW.GetTranslation("fcg.ubgl" .. abbrev)
 
@@ -318,7 +319,7 @@ function FindArcCWFiremode()
 	if mode < 0 then return tostring(-mode) .. "-Burst" end
 end
 
-function PKAD2_GetWeaponData()
+local function PKAD2_GetWeaponData()
 	ply = LocalPlayer()
 	Weapon = ply:GetActiveWeapon()
 
@@ -365,7 +366,7 @@ function PKAD2_GetWeaponData()
 	end
 end
 
-function PKAD2_GetFiremode()
+local function PKAD2_GetFiremode()
 	ActivePrimaryFire = true
 
 	usekey = string.Replace(input.LookupBinding("+use"), "MOUSE", "M")
@@ -490,7 +491,7 @@ function PKAD2_GetFiremode()
 	end
 end
 
-function PKAD2_ColorManager()
+local function PKAD2_ColorManager()
 	if dynamic:GetBool() then
 		hidealpha = math.Approach(hidealpha, 150 * ply:GetVelocity():Length() / 250, 100 * RealFrameTime())
 	else
@@ -598,7 +599,7 @@ function PKAD2_ColorManager()
 	end
 end
 
-function PKAD2_AmmoPanels()
+local function PKAD2_AmmoPanels()
 	local vp = ply:GetViewPunchAngles()
 	if !sway:GetBool() then
 		vp.x = 0
