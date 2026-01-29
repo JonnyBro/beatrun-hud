@@ -45,6 +45,8 @@ CreateClientConVar("PKAD_TextColor", "255 255 255 255", true, false, "Ammo count
 CreateClientConVar("PKAD_TextLowColor", "255 0 0 230", true, false, "Ammo counter text color when low.")
 CreateClientConVar("PKAD_TextLowInactiveColor", "100 50 50 100", true, false, "Ammo counter text color when low and inactive. Used on altfire when not in altfire mode and vice versa.")
 CreateClientConVar("PKAD_BlurTintColor", "0 0 0 0", true, false, "Blur tint color. Helps with visibility. Only works with blur enabled./n Alpha value is locked, sorry!")
+CreateClientConVar("PKAD_HealthColor", "255 255 255 255", true, false, "Health text and bar color. Ignored when low.")
+CreateClientConVar("PKAD_ArmorColor", "65 124 174 124", true, false, "Armor text and bar color.")
 
 local deadzonex = CreateClientConVar("PKAD_DeadzoneX", "0", true, false, "Use this HUD while playing on your HDTV!", 0, 0.5)
 local deadzoney = CreateClientConVar("PKAD_DeadzoneY", "0", true, false, "Use this HUD while playing on your HDTV!", 0, 0.5)
@@ -100,6 +102,8 @@ local ammobarcolor = nil
 local armorbackground = nil
 local ammolowcolor = nil
 local ammolowcolor1 = nil
+local healthcolor = nil
+local armorcolor = nil
 
 local ammolowpulsecolor = Color(255,0,0,230)
 local reservelowpulsecolor = Color(255,0,0,230)
@@ -108,6 +112,8 @@ local altreservelowpulsecolor = Color(255,0,0,230)
 
 -- Variables: Textures and the like
 local blurtex = Material("pp/blurscreen")
+local healthpack = Material("pkad/healthpack.png", " alphatest ")
+local armorplate = Material("pkad/armorplate.png", " alphatest ")
 
 local ARC9Installed = false
 local ArcCWInstalled = false
@@ -278,18 +284,18 @@ local function FindA9Firemode()
 		FiremodeText = arc9_mode.PrintName
 	else
 		if arc9_mode.Mode == 1 then
-			FiremodeText = "#pkad_firemodes_semi"
+			FiremodeText = language.GetPhrase("pkad_firemodes_semi")
 		elseif arc9_mode.Mode == 0 then
-			FiremodeText = "#pkad_firemodes_safety"
+			FiremodeText = language.GetPhrase("pkad_firemodes_safety")
 		elseif arc9_mode.Mode < 0 then
-			FiremodeText = "#pkad_firemodes_auto"
+			FiremodeText = language.GetPhrase("pkad_firemodes_auto")
 		elseif arc9_mode.Mode > 1 then
 			FiremodeText = language.GetPhrase("pkad_firemodes_burst"):format(tostring(arc9_mode.Mode))
 		end
 	end
 	
 	if Weapon:GetSafe() then
-		FiremodeText = "#pkad_firemodes_safety"
+		FiremodeText = language.GetPhrase("pkad_firemodes_safety")
 	end
 	
 	return FiremodeText
@@ -315,9 +321,9 @@ local function FindArcCWFiremode()
 	end
 
 	local mode = fm.Mode
-	if mode == 0 then return "#pkad_firemodes_safety" end
-	if mode == 1 then return "#pkad_firemodes_semi" end
-	if mode >= 2 then return "#pkad_firemodes_auto" end
+	if mode == 0 then return language.GetPhrase("pkad_firemodes_safety") end
+	if mode == 1 then return language.GetPhrase("pkad_firemodes_semi") end
+	if mode >= 2 then return language.GetPhrase("pkad_firemodes_auto") end
 	if mode < 0 then return language.GetPhrase("pkad_firemodes_burst"):format(tostring(-mode)) end
 end
 
@@ -370,6 +376,7 @@ end
 
 local function PKAD2_GetFiremode()
 	ActivePrimaryFire = true
+	WeaponJammed = false
 
 	usekey = string.Replace(input.LookupBinding("+use"), "MOUSE", "M")
 	attack2 = string.Replace(input.LookupBinding("+attack2"), "MOUSE", "M")
@@ -400,6 +407,7 @@ local function PKAD2_GetFiremode()
 		
 		if Weapon:GetJammed() then
 			WeaponJammed = true
+			FiremodeText = "MALFUNCTIONING"
 		end
 		
 		-- if Weapon:GetProcessedValue("Overheat", true) then
@@ -426,6 +434,7 @@ local function PKAD2_GetFiremode()
 		
 		if Weapon:GetMalfunctionJam() then
 			WeaponJammed = true
+			FiremodeText = "MALFUNCTIONING"
 		end
 	elseif ismgbase then
 		-- FIXME: Fix Safety detection for the dev build of MWBase and make it also work for the public build.
@@ -523,6 +532,8 @@ local function PKAD2_ColorManager()
 	armorbackground = string.ToColor("110 110 110 128")
 	ammolowcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_TextLowColor"))
 	ammolowcolor1 = string.ToColor(LocalPlayer():GetInfo("PKAD_TextLowInactiveColor"))
+	healthcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_HealthColor"))
+	armorcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_ArmorColor"))
 	corner_color_c.a = math.Clamp(corner_color_c.a + 50, 0, 255)
 	corner_color_c.a = dynamic:GetBool() and math.max(150 - hidealpha, 25) or corner_color_c.a
 	ammolowcolor1.a = dynamic:GetBool() and math.max(100 - hidealpha, 25) or ammolowcolor.a
@@ -532,6 +543,8 @@ local function PKAD2_ColorManager()
 	othertext.a = dynamic:GetBool() and math.max(255 - hidealpha, 2) or othertext.a
 	otherammocolor.a = dynamic:GetBool() and math.max(255 - hidealpha, 2) or otherammocolor.a
 	text_color.a = dynamic:GetBool() and math.max(255 - hidealpha, 2) or text_color.a
+	healthcolor.a = dynamic:GetBool() and math.max(255 - hidealpha, 2) or healthcolor.a
+	armorcolor.a = dynamic:GetBool() and math.max(255 - hidealpha, 2) or armorcolor.a
 
 	--math.sin(CurTime() * 2) * 255
 
@@ -617,7 +630,7 @@ local function PKAD2_ColorManager()
 	end
 end
 
-local function PKAD2_AmmoPanels()
+local function PKAD2_DrawPanels()
 	local vp = ply:GetViewPunchAngles()
 	if !sway:GetBool() then
 		vp.x = 0
@@ -648,177 +661,224 @@ local function PKAD2_AmmoPanels()
 	local FiremodeW, FiremodeH = surface.GetTextSize(FiremodeText)
 	local AltFiremodeW, AltFiremodeH = surface.GetTextSize(AltFiremodeText)
 	
-	if IsValid(Weapon) and ply:IsValid() and ply:Alive() and Weapon:GetPrimaryAmmoType() != -1 and !hidden:GetBool() then
-		surface.SetDrawColor(corner_color_c)
-		surface.DrawRect(scrw - 18.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 40 * scale, scale * 85)
-
-		if WepClip1 < WepMag1 / 3 then
-			surface.SetDrawColor(ammolowpulsecolor)
-			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
-		end
-		DrawBlurRect2(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.max(255 - hidealpha, 2))
-		surface.SetDrawColor(corner_color_c)
-		surface.DrawOutlinedRect(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.Clamp(scale, 1, 32767))
-		local OverflowText = ""
-
-		if !BottomlessMag then
-			if OverCapacity > 0 then
-				OverflowText = "+" .. OverCapacity
-			end
-
-			if WepReserve1 == 0 then
-				local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
-				surface.SetFont("PKAD_BlurredBigText")
-				local Reserve1W, Reserve1H = surface.GetTextSize("/" .. WepReserve1)
-				surface.SetTextColor(reservelowpulsecolor)
-				surface.SetTextPos(scrw - 26.88 * scale - Reserve1W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-				surface.DrawText("/" .. WepReserve1)
-			end
-
-			local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
-			surface.SetFont("PKAD_BigText")
-			local Reserve1W, Reserve1H = surface.GetTextSize("/" .. WepReserve1)
-			surface.SetTextColor(ReserveColor)
-			surface.SetTextPos(scrw - 26.88 * scale - Reserve1W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-			surface.DrawText("/" .. WepReserve1)
+	if ply:IsValid() and ply:Alive() and !hidden:GetBool() then
+		if IsValid(Weapon) and Weapon:GetPrimaryAmmoType() != -1 then
+			surface.SetDrawColor(corner_color_c)
+			surface.DrawRect(scrw - 18.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 40 * scale, scale * 85)
 
 			if WepClip1 < WepMag1 / 3 then
-				surface.SetFont("PKAD_BlurredHugeText")
+				surface.SetDrawColor(ammolowpulsecolor)
+				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
+			end
+			DrawBlurRect2(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.max(255 - hidealpha, 2))
+			surface.SetDrawColor(corner_color_c)
+			surface.DrawOutlinedRect(scrw - 218.88 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 200, scale * 85, math.Clamp(scale, 1, 32767))
+			local OverflowText = ""
+
+			if !BottomlessMag then
+				if OverCapacity > 0 then
+					OverflowText = "+" .. OverCapacity
+				end
+
+				if WepReserve1 == 0 then
+					local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
+					surface.SetFont("PKAD_BlurredBigText")
+					local Reserve1W, Reserve1H = surface.GetTextSize("/" .. WepReserve1)
+					surface.SetTextColor(reservelowpulsecolor)
+					surface.SetTextPos(scrw - 26.88 * scale - Reserve1W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
+					surface.DrawText("/" .. WepReserve1)
+				end
+
+				local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
+				surface.SetFont("PKAD_BigText")
+				local Reserve1W, Reserve1H = surface.GetTextSize("/" .. WepReserve1)
+				surface.SetTextColor(ReserveColor)
+				surface.SetTextPos(scrw - 26.88 * scale - Reserve1W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
+				surface.DrawText("/" .. WepReserve1)
+
+				if WepClip1 < WepMag1 / 3 then
+					surface.SetFont("PKAD_BlurredHugeText")
+					local MagazineW, MagazineH = surface.GetTextSize(WepClip1)
+					surface.SetTextPos(scrw - 26.88 * scale - Reserve1W - OverflowSizeW - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
+					surface.SetTextColor(ammolowpulsecolor)
+					surface.DrawText(WepClip1)
+				end
+
+				surface.SetFont("PKAD_HugeText")
 				local MagazineW, MagazineH = surface.GetTextSize(WepClip1)
 				surface.SetTextPos(scrw - 26.88 * scale - Reserve1W - OverflowSizeW - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-				surface.SetTextColor(ammolowpulsecolor)
+				surface.SetTextColor(MagazineColor)
 				surface.DrawText(WepClip1)
-			end
 
-			surface.SetFont("PKAD_HugeText")
-			local MagazineW, MagazineH = surface.GetTextSize(WepClip1)
-			surface.SetTextPos(scrw - 26.88 * scale - Reserve1W - OverflowSizeW - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-			surface.SetTextColor(MagazineColor)
-			surface.DrawText(WepClip1)
+				surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)
+				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 2.55)	
 
-			surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)
-			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 2.55)	
+				surface.SetDrawColor(MagBarColor)
+				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
+				surface.SetDrawColor(255, 225, 0, ammobarcolor.a)
+				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 61.96 * scale + vp.x - safezoney, 150 * scale * OverfillRatio, scale * 2)
 
-			surface.SetDrawColor(MagBarColor)
-			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale * MagFillRatio, scale * 5)
-			surface.SetDrawColor(255, 225, 0, ammobarcolor.a)
-			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 61.96 * scale + vp.x - safezoney, 150 * scale * OverfillRatio, scale * 2)
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 26.88 * scale - Reserve1W - OverflowSizeW + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
+				surface.DrawText(OverflowText)
 
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 26.88 * scale - Reserve1W - OverflowSizeW + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-			surface.DrawText(OverflowText)
+				surface.SetTextColor(AmmoColor)
+				if WeaponJammed then
+					surface.SetTextColor(255, 0, 0, text_color.a)
+				end
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 28 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(FiremodeText))
 
-			surface.SetTextColor(AlternateAmmoColor)
-			if WeaponJammed then
-				surface.SetTextColor(255, 0, 0, text_color.a)
-			end
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 28 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(FiremodeText))
+				surface.SetTextColor(color_white)
+				surface.SetTextPos(scrw - 217 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(firemodekey))
+			elseif BottomlessMag then
+				surface.SetFont("PKAD_HugeText")
+				local MagazineW, MagazineH = surface.GetTextSize(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
 
-			surface.SetTextColor(color_white)
-			surface.SetTextPos(scrw - 217 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(firemodekey))
-		elseif BottomlessMag then
-			surface.SetFont("PKAD_HugeText")
-			local MagazineW, MagazineH = surface.GetTextSize(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
+				if !InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999) == 0) then
+					local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
+					local Reserve1W, Reserve1H = surface.GetTextSize(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+					surface.SetTextColor(reservelowpulsecolor)
+					surface.SetTextPos(scrw * 0.986 - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
+					surface.DrawText(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+				end
 
-			if !InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999) == 0) then
-				local OverflowSizeW, OverflowSizeY = surface.GetTextSize(OverflowText)
-				surface.SetFont("PKAD_BlurredBigText")
-				local Reserve1W, Reserve1H = surface.GetTextSize(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
-				surface.SetTextColor(reservelowpulsecolor)
+				surface.SetFont("PKAD_HugeText")
 				surface.SetTextPos(scrw * 0.986 - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-				surface.DrawText(WepReserve1 + math.Clamp(WepClip1, 0, 9999))
+				surface.SetTextColor(MagazineColor)
+				surface.DrawText(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
+				
+				surface.SetDrawColor(MagBarColor)
+				surface.DrawRect(scrw * 0.908 + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 5)
+				
+				surface.SetTextColor(AmmoColor)
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 26.88 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(FiremodeText))
+
+				surface.SetTextColor(color_white)
+				surface.SetTextPos(scrw - 217 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(firemodekey))
 			end
 
-			surface.SetFont("PKAD_BiggerText")
-
-			surface.SetTextPos(scrw * 0.986 - MagazineW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-			surface.SetTextColor(MagazineColor)
-			surface.DrawText(!InfiniteReserve and (WepReserve1 + math.Clamp(WepClip1, 0, 9999)) or WepReserve1)
+			if HasAltFire and InstantAltfire then
+				surface.SetDrawColor(corner_color_c)
+				surface.DrawRect(scrw - 260.512 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 25 * scale, scale * 85)
+				DrawBlurRect2(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.max(255 - 	hidealpha, 2))
+				surface.SetDrawColor(corner_color_c)
+				surface.DrawOutlinedRect(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.Clamp(scale, 1, 32767))
 			
-			surface.SetDrawColor(MagBarColor)
-			surface.DrawRect(scrw * 0.908 + vp.z - safezonex, scrh - 66.96 * scale + vp.x - safezoney, 150 * scale, scale * 5)
+				surface.SetFont("PKAD_HugeText")
+				local Reserve2H, Reserve2W = surface.GetTextSize((WepReserve2 + math.Clamp(WepClip2, 0, 9999)))
+				surface.SetTextPos(scrw - 268 * scale - Reserve2H + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
+				surface.SetTextColor(AltfireColor)
+				surface.DrawText((WepReserve2 + math.Clamp(WepClip2, 0, 9999)))
 			
-			surface.SetTextColor(AlternateAmmoColor)
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 26.88 * scale - FiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(FiremodeText))
-
-			surface.SetTextColor(color_white)
-			surface.SetTextPos(scrw - 217 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(firemodekey))
-		end
-
-		if HasAltFire and InstantAltfire then
-			surface.SetDrawColor(corner_color_c)
-			surface.DrawRect(scrw - 260.512 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 25 * scale, scale * 85)
-			DrawBlurRect2(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.max(255 - 	hidealpha, 2))
-			surface.SetDrawColor(corner_color_c)
-			surface.DrawOutlinedRect(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.Clamp(scale, 1, 32767))
-		
-			surface.SetFont("PKAD_HugeText")
-			local Reserve2H, Reserve2W = surface.GetTextSize((WepReserve2 + math.Clamp(WepClip2, 0, 9999)))
-			surface.SetTextPos(scrw - 268 * scale - Reserve2H + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-			surface.SetTextColor(AltfireColor)
-			surface.DrawText((WepReserve2 + math.Clamp(WepClip2, 0, 9999)))
-		
-			surface.SetDrawColor(AltMagBarColor)					
-			surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale, scale * 5)
-		
-			surface.SetTextColor(AmmoColor)
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 268 * scale - AltFiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(AltFiremodeText))
-		
-			surface.SetTextColor(255,255,255,othertext.a)
-			surface.SetTextPos(scrw - 418 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(ubglkey))
-		elseif HasAltFire and !InstantAltfire then
-			surface.SetDrawColor(corner_color_c)
-			surface.DrawRect(scrw - 260.512 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 25 * scale, scale * 85)
-			DrawBlurRect2(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.max(255 - hidealpha, 2))
-			surface.SetDrawColor(corner_color_c)
-			surface.DrawOutlinedRect(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.Clamp(scale, 1, 32767))
+				surface.SetDrawColor(AltMagBarColor)					
+				surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale, scale * 5)
 			
-			surface.SetFont("PKAD_BigText")
-			local Reserve2W, Reserve2H = surface.GetTextSize("/" .. WepReserve2)
-			surface.SetTextPos(scrw - 268 * scale - Reserve2W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-			surface.SetTextColor(AltReserveColor)
-			surface.DrawText("/" .. WepReserve2)
+				surface.SetTextColor(AlternateAmmoColor)
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 268 * scale - AltFiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(AltFiremodeText))
+			
+				surface.SetTextColor(255,255,255,othertext.a)
+				surface.SetTextPos(scrw - 418 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(ubglkey))
+			elseif HasAltFire and !InstantAltfire then
+				surface.SetDrawColor(corner_color_c)
+				surface.DrawRect(scrw - 260.512 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, 25 * scale, scale * 85)
+				DrawBlurRect2(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.max(255 - hidealpha, 2))
+				surface.SetDrawColor(corner_color_c)
+				surface.DrawOutlinedRect(scrw - 419.174 * scale + vp.z - safezonex, scrh - 113.4 * scale + vp.x - safezoney, scale * 161, scale * 85, math.Clamp(scale, 1, 32767))
+				
+				surface.SetFont("PKAD_BigText")
+				local Reserve2W, Reserve2H = surface.GetTextSize("/" .. WepReserve2)
+				surface.SetTextPos(scrw - 268 * scale - Reserve2W + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
+				surface.SetTextColor(AltReserveColor)
+				surface.DrawText("/" .. WepReserve2)
 
-			local OverflowAltText = ""
-			if OverAltCapacity > 0 then
-				OverflowAltText = "+" .. OverAltCapacity
+				local OverflowAltText = ""
+				if OverAltCapacity > 0 then
+					OverflowAltText = "+" .. OverAltCapacity
+				end
+				local OverflowAltSizeW, OverflowAltSizeY = surface.GetTextSize(OverflowAltText)
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 268 * scale - Reserve2W - OverflowAltSizeW + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
+				surface.DrawText(OverflowAltText)
+				
+				surface.SetFont("PKAD_HugeText")
+				local AltfireW, AltfireH = surface.GetTextSize(WepClip2)
+				surface.SetTextPos(scrw - 268 * scale - Reserve2W - AltfireW - OverflowAltSizeW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
+				surface.SetTextColor(AltfireColor)
+				surface.DrawText(WepClip2)
+				
+				surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
+				surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale, scale * 2.55)
+				surface.SetDrawColor(AltMagBarColor)
+				surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale * AltFillRatio, scale * 5)
+				surface.SetDrawColor(255, 225, 0, ammobarcolor.a)
+				surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 61.96 * scale + vp.x - safezoney, 150 * scale * AltOverfillRatio, scale * 2)
+			
+				surface.SetTextColor(AlternateAmmoColor)
+				surface.SetFont("PKAD_SmallText")
+				surface.SetTextPos(scrw - 268 * scale - AltFiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(AltFiremodeText))
+			
+				surface.SetTextColor(255,255,255,othertext.a)
+				surface.SetTextPos(scrw - 418 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(string.upper(ubglkey))
 			end
-			local OverflowAltSizeW, OverflowAltSizeY = surface.GetTextSize(OverflowAltText)
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 268 * scale - Reserve2W - OverflowAltSizeW + vp.z - safezonex, scrh - 97.2 * scale + vp.x - safezoney)
-			surface.DrawText(OverflowAltText)
-			
-			surface.SetFont("PKAD_HugeText")
-			local AltfireW, AltfireH = surface.GetTextSize(WepClip2)
-			surface.SetTextPos(scrw - 268 * scale - Reserve2W - AltfireW - OverflowAltSizeW + vp.z - safezonex, scrh - 108 * scale + vp.x - safezoney)
-			surface.SetTextColor(AltfireColor)
-			surface.DrawText(WepClip2)
-			
-			surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
-			surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale, scale * 2.55)
-			surface.SetDrawColor(AltMagBarColor)
-			surface.DrawRect(scrw - 368 * scale + vp.z - safezonex, scrh - 66.96 * scale + 1 + vp.x - safezoney, 100 * scale * AltFillRatio, scale * 5)
-			surface.SetDrawColor(255, 225, 0, ammobarcolor.a)
-			surface.DrawRect(scrw - 176.64 * scale + vp.z - safezonex, scrh - 61.96 * scale + vp.x - safezoney, 150 * scale * AltOverfillRatio, scale * 2)
-		
-			surface.SetTextColor(AmmoColor)
-			surface.SetFont("PKAD_SmallText")
-			surface.SetTextPos(scrw - 268 * scale - AltFiremodeW + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(AltFiremodeText))
-		
-			surface.SetTextColor(255,255,255,othertext.a)
-			surface.SetTextPos(scrw - 418 * scale + vp.z - safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(string.upper(ubglkey))
 		end
+
+		local healthratio = math.min(ply:Health() / ply:GetMaxHealth(), 1)
+		local overhealth = math.max((ply:Health() / ply:GetMaxHealth()) - 1, 0)
+		local ArmorRatio = math.min(ply:Armor() / ply:GetMaxArmor(), 1)
+		local OverArmor = math.max((ply:Armor() / ply:GetMaxArmor()) - 1, 0)
+
+		DrawBlurRect2(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.max(255 - hidealpha, 2))
+		surface.SetDrawColor(corner_color_c)
+		surface.DrawRect(-18.88 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, 40 * scale, scale * 63)
+		surface.DrawOutlinedRect(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.Clamp(scale, 1, 32767))
+
+		surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
+		surface.SetDrawColor(healthratio > 1 / 3 and healthcolor or ammolowcolor)
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale * healthratio, scale * 7)
+		surface.SetDrawColor(255, 225, 0, healthcolor.a)
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 62.96 * scale + vp.x - safezoney, 210 * scale * overhealth, scale * 2)
+		
+		surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
+		surface.SetDrawColor(armorcolor)
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale * ArmorRatio, scale * 5)
+		surface.SetDrawColor(255, 225, 0, armorcolor.a)
+		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 77.96 * scale + vp.x - safezoney, 210 * scale * OverArmor, scale * 4)
+		
+		if ply.GetStims then
+			surface.SetMaterial(healthpack)
+			surface.SetDrawColor(255,255,255,othertext.a)
+			surface.DrawTexturedRect(30 * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
+			surface.SetTextColor(255,255,255,othertext.a)
+			surface.SetTextPos(55 * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+			surface.DrawText(ply:GetStims())
+		end
+
+		if ply.GetArmorPlates or GetConVar("wz_armorsys_armorplates_maxcarry") then
+			surface.SetMaterial(armorplate)
+			surface.SetDrawColor(255,255,255,othertext.a)
+			surface.DrawTexturedRect((30 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
+			surface.SetTextColor(255,255,255,othertext.a)
+			surface.SetTextPos((55 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+			surface.DrawText(ply.GetArmorPlates and ply:GetArmorPlates() or GetConVar("wz_armorsys_armorplates_maxcarry") and ply:GetAmmoCount("WZ_ARMORPLATE"))
+		end
+
+		local w = select(1, surface.GetTextSize(ply:Health() .. "+" .. ply:Armor()))
+		surface.SetTextColor(255,255,255,othertext.a)
+		surface.SetTextPos(240 * scale - w + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+		surface.DrawText(ply:Health() .. "+" .. ply:Armor())
 	end
 end
 
@@ -843,7 +903,7 @@ hook.Add("HUDPaint", "PKAD2_Draw", function()
 	if IsValid(Weapon) then
 		PKAD2_GetFiremode()
 		PKAD2_ColorManager()
-		PKAD2_AmmoPanels()
+		PKAD2_DrawPanels()
 	end
 end)
 
