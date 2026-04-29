@@ -907,4 +907,4 @@ hook.Add("HUDPaint", "PKAD2_Draw", function()
 	end
 end)
 
-concommand.Add("PKAD_ReloadFonts", PKAD2_InitFonts())
+concommand.Add("PKAD_ReloadFonts", PKAD2_InitFonts)
