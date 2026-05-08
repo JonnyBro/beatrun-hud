@@ -30,6 +30,7 @@ local VanillaAutomatics = {
 
 -- All SORTS of ClientCVars
 local hidden = CreateClientConVar("PKAD_Hidden", "0", true, false, "Blocks the ammo counter from rendering", 0, 2)
+local enablehealth = CreateClientConVar("PKAD_EnableHealth", "0", true, false, "UNFINISHED: Enable health and armor panel", 0, 1)
 local sway = CreateClientConVar("PKAD_Sway", "1", true, false, "Display HUD swaying", 0, 1)
 local dynamic = CreateClientConVar("PKAD_Dynamic", "0", true, false, "Hide HUD when moving (why the frick would you enable this?)", 0, 1)
 local UserScale = CreateClientConVar("PKAD_Scale", "1", true, false, "Define your own scaling!")
@@ -833,52 +834,54 @@ local function PKAD2_DrawPanels()
 			end
 		end
 
-		local healthratio = math.min(ply:Health() / ply:GetMaxHealth(), 1)
-		local overhealth = math.max((ply:Health() / ply:GetMaxHealth()) - 1, 0)
-		local ArmorRatio = math.min(ply:Armor() / ply:GetMaxArmor(), 1)
-		local OverArmor = math.max((ply:Armor() / ply:GetMaxArmor()) - 1, 0)
+		if enablehealth:GetBool() then
+			local healthratio = math.min(ply:Health() / ply:GetMaxHealth(), 1)
+			local overhealth = math.max((ply:Health() / ply:GetMaxHealth()) - 1, 0)
+			local ArmorRatio = math.min(ply:Armor() / ply:GetMaxArmor(), 1)
+			local OverArmor = math.max((ply:Armor() / ply:GetMaxArmor()) - 1, 0)
 
-		DrawBlurRect2(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.max(255 - hidealpha, 2))
-		surface.SetDrawColor(corner_color_c)
-		surface.DrawRect(-18.88 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, 40 * scale, scale * 63)
-		surface.DrawOutlinedRect(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.Clamp(scale, 1, 32767))
+			DrawBlurRect2(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.max(255 - hidealpha, 2))
+			surface.SetDrawColor(corner_color_c)
+			surface.DrawRect(-18.88 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, 40 * scale, scale * 63)
+			surface.DrawOutlinedRect(21.12 * scale + vp.z + safezonex, scrh - 91.4 * scale + vp.x - safezoney, scale * 227, scale * 63, math.Clamp(scale, 1, 32767))
 
-		surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
-		surface.SetDrawColor(healthratio > 1 / 3 and healthcolor or ammolowcolor)
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale * healthratio, scale * 7)
-		surface.SetDrawColor(255, 225, 0, healthcolor.a)
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 62.96 * scale + vp.x - safezoney, 210 * scale * overhealth, scale * 2)
-		
-		surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
-		surface.SetDrawColor(armorcolor)
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale * ArmorRatio, scale * 5)
-		surface.SetDrawColor(255, 225, 0, armorcolor.a)
-		surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 77.96 * scale + vp.x - safezoney, 210 * scale * OverArmor, scale * 4)
-		
-		if ply.GetStims then
-			surface.SetMaterial(healthpack)
-			surface.SetDrawColor(255,255,255,othertext.a)
-			surface.DrawTexturedRect(30 * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
+			surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
+			surface.SetDrawColor(healthratio > 1 / 3 and healthcolor or ammolowcolor)
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 68.96 * scale + vp.x - safezoney, 210 * scale * healthratio, scale * 7)
+			surface.SetDrawColor(255, 225, 0, healthcolor.a)
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 62.96 * scale + vp.x - safezoney, 210 * scale * overhealth, scale * 2)
+			
+			surface.SetDrawColor(10, 50, 50, ammolowcolor1.a)					
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale, scale * 2.55)
+			surface.SetDrawColor(armorcolor)
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 76.96 * scale + vp.x - safezoney, 210 * scale * ArmorRatio, scale * 5)
+			surface.SetDrawColor(255, 225, 0, armorcolor.a)
+			surface.DrawRect(30 * scale + vp.z + safezonex, scrh - 77.96 * scale + vp.x - safezoney, 210 * scale * OverArmor, scale * 4)
+			
+			if ply.GetStims then
+				surface.SetMaterial(healthpack)
+				surface.SetDrawColor(255,255,255,othertext.a)
+				surface.DrawTexturedRect(30 * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
+				surface.SetTextColor(255,255,255,othertext.a)
+				surface.SetTextPos(55 * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(ply:GetStims())
+			end
+
+			if ply.GetArmorPlates or GetConVar("wz_armorsys_armorplates_maxcarry") then
+				surface.SetMaterial(armorplate)
+				surface.SetDrawColor(255,255,255,othertext.a)
+				surface.DrawTexturedRect((30 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
+				surface.SetTextColor(255,255,255,othertext.a)
+				surface.SetTextPos((55 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+				surface.DrawText(ply.GetArmorPlates and ply:GetArmorPlates() or GetConVar("wz_armorsys_armorplates_maxcarry") and ply:GetAmmoCount("WZ_ARMORPLATE"))
+			end
+
+			local w = select(1, surface.GetTextSize(ply:Health() .. "+" .. ply:Armor()))
 			surface.SetTextColor(255,255,255,othertext.a)
-			surface.SetTextPos(55 * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(ply:GetStims())
+			surface.SetTextPos(240 * scale - w + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
+			surface.DrawText(ply:Health() .. "+" .. ply:Armor())
 		end
-
-		if ply.GetArmorPlates or GetConVar("wz_armorsys_armorplates_maxcarry") then
-			surface.SetMaterial(armorplate)
-			surface.SetDrawColor(255,255,255,othertext.a)
-			surface.DrawTexturedRect((30 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54.96 * scale + vp.x - safezoney, 20 * scale, 20 * scale)
-			surface.SetTextColor(255,255,255,othertext.a)
-			surface.SetTextPos((55 + (ply.GetStims and 65 or 0)) * scale + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
-			surface.DrawText(ply.GetArmorPlates and ply:GetArmorPlates() or GetConVar("wz_armorsys_armorplates_maxcarry") and ply:GetAmmoCount("WZ_ARMORPLATE"))
-		end
-
-		local w = select(1, surface.GetTextSize(ply:Health() .. "+" .. ply:Armor()))
-		surface.SetTextColor(255,255,255,othertext.a)
-		surface.SetTextPos(240 * scale - w + vp.z + safezonex, scrh - 54 * scale + vp.x - safezoney)
-		surface.DrawText(ply:Health() .. "+" .. ply:Armor())
 	end
 end
 
