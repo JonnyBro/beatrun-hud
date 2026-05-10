@@ -6,6 +6,7 @@ local CPPAltfireWeps = {
 	["Weapon_mp5_hl1"] = true
 }  
 
+
 -- local MWBaseFiremodes = { -- ...is MWB even localized?
 --  ["AUTOMATIC"] = "#pkad_firemodes_auto", 
 -- 	["FULL AUTO"] = "#pkad_firemodes_auto",
@@ -35,6 +36,8 @@ local sway = CreateClientConVar("PKAD_Sway", "1", true, false, "Display HUD sway
 local dynamic = CreateClientConVar("PKAD_Dynamic", "0", true, false, "Hide HUD when moving (why the frick would you enable this?)", 0, 1)
 local UserScale = CreateClientConVar("PKAD_Scale", "1", true, false, "Define your own scaling!")
 local blur = CreateClientConVar("PKAD_NoBlur", "1", true, false, "Define your own scaling!")
+local beatruncolors = CreateClientConVar("PKAD_UseBeatrunColors", 1, true, false, "Use Beatrun colors. Only works while in Beatrun gamemode, and only if your Beatrun version includes this functionality.\nDOES NOT AFFECT: Health and armor panel, ammo text when low", 0, 1)
+local barsusecornercolor = CreateClientConVar("PKAD_BarUsesCornerColor", 0, true, false, "Use corner color instead of text color for bars.\nDOES NOT AFFECT: Health and armor panel", 0, 1)
 local playername = ""
 local ply = nil
 local scale = ScrH() / 1080 * UserScale:GetFloat()
@@ -119,6 +122,9 @@ local armorplate = Material("pkad/armorplate.png", " alphatest ")
 local ARC9Installed = false
 local ArcCWInstalled = false
 local TFAInstalled = false
+
+local gamemodename = engine.ActiveGamemode()
+local usebeatruncolors = false
 
 local hide = {
     CHudBattery = GetConVar("PKAD_Hidden"):GetBool(),
@@ -520,21 +526,24 @@ local function PKAD2_GetFiremode()
 end
 
 local function PKAD2_ColorManager()
+	usebeatruncolors = gamemodename == "beatrun" and beatruncolors:GetBool()
+
 	if dynamic:GetBool() then
 		hidealpha = math.Approach(hidealpha, 150 * ply:GetVelocity():Length() / 250, 100 * RealFrameTime())
 	else
 		hidealpha = 0
 	end
-	corner_color_c = string.ToColor(LocalPlayer():GetInfo("PKAD_CornerColor"))
-	text_color = string.ToColor(LocalPlayer():GetInfo("PKAD_TextColor"))
+	corner_color_c = usebeatruncolors and string.ToColor(ply:GetInfo("Beatrun_HUDCornerColor")) or string.ToColor(ply:GetInfo("PKAD_CornerColor"))
+	text_color = usebeatruncolors and string.ToColor(ply:GetInfo("Beatrun_HUDTextColor")) or string.ToColor(ply:GetInfo("PKAD_TextColor"))
 	otherammocolor = string.ToColor("153 153 153 255")
 	othertext = string.ToColor("255 255 255 255")
-	ammobarcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_AmmobarColor")), math.max(255 - hidealpha, 2)
+	ammobarcolor = usebeatruncolors and string.ToColor(ply:GetInfo(barsusecornercolor:GetBool() and "Beatrun_HUDCornerColor" or "Beatrun_HUDTextColor"))
+		or (string.ToColor(ply:GetInfo("PKAD_AmmobarColor")))
 	armorbackground = string.ToColor("110 110 110 128")
-	ammolowcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_TextLowColor"))
-	ammolowcolor1 = string.ToColor(LocalPlayer():GetInfo("PKAD_TextLowInactiveColor"))
-	healthcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_HealthColor"))
-	armorcolor = string.ToColor(LocalPlayer():GetInfo("PKAD_ArmorColor"))
+	ammolowcolor = string.ToColor(ply:GetInfo("PKAD_TextLowColor"))
+	ammolowcolor1 = string.ToColor(ply:GetInfo("PKAD_TextLowInactiveColor"))
+	healthcolor = string.ToColor(ply:GetInfo("PKAD_HealthColor"))
+	armorcolor = string.ToColor(ply:GetInfo("PKAD_ArmorColor"))
 	corner_color_c.a = math.Clamp(corner_color_c.a + 50, 0, 255)
 	corner_color_c.a = dynamic:GetBool() and math.max(150 - hidealpha, 25) or corner_color_c.a
 	ammolowcolor1.a = dynamic:GetBool() and math.max(100 - hidealpha, 25) or ammolowcolor.a
