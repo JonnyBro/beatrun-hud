@@ -65,7 +65,7 @@ local WepReserve1 = -1
 local WepReserve2 = -1
 local HasAltFire = false
 local FiremodeText = "#pkad_firemodes_auto"
-local AltFiremodeText = "#pkad_altfire_placehold"
+local AltFiremodeText = language.GetPhrase("pkad_altfire_placehold")
 local ActivePrimaryFire = true
 local InstantAltfire = false
 local BottomlessMag = false
@@ -492,10 +492,10 @@ local function PKAD2_GetFiremode()
 			end
 		end
 
-		AltFiremodeText = "#pkad_altfire_placehold"
+		AltFiremodeText = language.GetPhrase("pkad_altfire_placehold")
 	elseif !VanillaAutomatics[Weapon:GetClass()] then
 		FiremodeText = "Semi-Auto"
-		AltFiremodeText = "#pkad_altfire_placehold"
+		AltFiremodeText = language.GetPhrase("pkad_altfire_placehold")
 	end
 
 	if isarc9 and input.LookupBinding("+arc9_ubgl") then
