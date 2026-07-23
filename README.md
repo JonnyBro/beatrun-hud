@@ -12,4 +12,4 @@ My attempt at making an ammo display that works well with Beatrun, and follows i
 ## Credits
 - ...whoever created the `x14y24pxHeadUpDaisy` font, which is used in this HUD. I tried searching for the original site but couldn't find it. If you could, let me know.
 - [datæ](https://steamcommunity.com/id/75651121243836): the *original, **possibly malicious*** Beatrun gamemode
-- [Arctic](https://github.com/haodongmo): some used ARC9 code for determining melee weapons
+- [Arctic](https://github.com/haodongmo): method taken from ARC9 to determine melee weapons (note: no code was taken; prior versions of this README implied that)
