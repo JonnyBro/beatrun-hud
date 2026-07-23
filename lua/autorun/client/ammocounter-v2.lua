@@ -508,7 +508,11 @@ local function PKAD2_GetFiremode()
 		ubglkey = "[" .. usekey .."]+[" .. reloadkey .. "]"
 	elseif ismgbase then -- can you tell mwb is weird
 		local inputpack = mw_input.GetUnpackedInputs(ply, "underbarrel")
-		ubglkey = "[" .. language.GetPhrase(input.GetKeyName(inputpack[1])) .. "]" .. (inputpack[2] and ("+[" .. language.GetPhrase(input.GetKeyName(inputpack[2])) .. "]"))
+		if !inputpack[1] then
+			ubglkey = "[???]"
+		else
+			ubglkey = "[" .. language.GetPhrase(input.GetKeyName(inputpack[1])) .. "]" .. (inputpack[2] and ("+[" .. language.GetPhrase(input.GetKeyName(inputpack[2])) .. "]") or "")
+		end
 	else
 		ubglkey = ""
 	end
@@ -519,7 +523,11 @@ local function PKAD2_GetFiremode()
 		firemodekey = "[" .. string.upper(string.Replace(input.LookupBinding("arccw_firemode", 1) or input.LookupBinding("+zoom", 1) or "", "MOUSE", "M"))  .. "]"
 	elseif ismgbase then
 		local inputpack = mw_input.GetUnpackedInputs(ply, "firemode")
-		firemodekey = "[" .. language.GetPhrase(input.GetKeyName(inputpack[1])) .. "]" .. (inputpack[2] and ("+[" .. language.GetPhrase(input.GetKeyName(inputpack[2])) .. "]") or "")
+		if !inputpack[1] then
+			firemodekey = "[???]"
+		else
+			firemodekey = "[" .. language.GetPhrase(input.GetKeyName(inputpack[1])) .. "]" .. (inputpack[2] and ("+[" .. language.GetPhrase(input.GetKeyName(inputpack[2])) .. "]") or "")
+		end
 	else
 		firemodekey = ""
 	end
