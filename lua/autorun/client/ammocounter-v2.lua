@@ -16,8 +16,8 @@ local CPPAltfireWeps = {
 -- }
 
 local TFAFiremodes = {
-    ["Full-Auto"] = "#pkad_firemodes_auto", 
-	["Semi-Auto"] = "#pkad_firemodes_semi",
+    ["Full-Auto"] = "language.GetPhrase("pkad_firemodes_auto")", 
+	["Semi-Auto"] = "language.GetPhrase("pkad_firemodes_semi")",
 	["3 Round Burst"] = language.GetPhrase("pkad_firemodes_burst"):format("3")
 }
 
@@ -64,7 +64,7 @@ local WepMag2 = -1
 local WepReserve1 = -1
 local WepReserve2 = -1
 local HasAltFire = false
-local FiremodeText = "#pkad_firemodes_auto"
+local FiremodeText = language.GetPhrase("pkad_firemodes_auto")
 local AltFiremodeText = language.GetPhrase("pkad_altfire_placehold")
 local ActivePrimaryFire = true
 local InstantAltfire = false
@@ -463,7 +463,7 @@ local function PKAD2_GetFiremode()
 		end
 	elseif Weapon:IsScripted() then
 		if !Weapon.Primary.Automatic then
-			FiremodeText = "#pkad_firemodes_semi"
+			FiremodeText = language.GetPhrase("pkad_firemodes_semi")
 		end
 		
 		if Weapon.ThreeRoundBurst then
@@ -476,19 +476,19 @@ local function PKAD2_GetFiremode()
 		
 		if Weapon.GetSafe then
 			if Weapon:GetSafe() then
-				FiremodeText = "#pkad_firemodes_safety"
+				FiremodeText = language.GetPhrase("pkad_firemodes_safety")
 			end
 		end
 		
 		if isfunction(Weapon.Safe) then
 			if Weapon:Safe() then
-				FiremodeText = "#pkad_firemodes_safety"
+				FiremodeText = language.GetPhrase("pkad_firemodes_safety")
 			end
 		end
 		
 		if isfunction(Weapon.Safety) then
 			if Weapon:Safety() then
-				FiremodeText = "#pkad_firemodes_safety"
+				FiremodeText = language.GetPhrase("pkad_firemodes_safety")
 			end
 		end
 
