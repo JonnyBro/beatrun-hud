@@ -18,26 +18,26 @@ Made for the [Beatrun](https://github.com/JonnyBro/beatrun) gamemode, but works 
 
 ## Beatrun and other gamemodes
 
-|               | Beatrun                                                      | Other gamemodes                          |
-| ------------- | ------------------------------------------------------------ | ---------------------------------------- |
-| Panel color   | `Beatrun_HUDCornerColor`                                     | `cl_playercolor`                         |
-| Text color    | `Beatrun_HUDTextColor`                                       | White                                    |
-| Bar color     | `Beatrun_HUDTextColor`                                       | `cl_weaponcolor`                         |
-| Sway, dynamic | `Beatrun_HUDSway`, `Beatrun_HUDDynamic`                      | `Beatrun_AmmoHUDSway`, `Beatrun_AmmoHUDDynamic` |
-| Hiding        | `Beatrun_HUDHidden`, build mode, large menus                 | Camera and `HUDShouldDraw`               |
-| Health panel  | Above the level panel                                        | Bottom left corner, replaces the HL2 one |
+|               | Beatrun                                                      | Other gamemodes                                     |
+| ------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| Panel color   | `Beatrun_HUDCornerColor`                                     | `cl_playercolor`                                    |
+| Text color    | `Beatrun_HUDTextColor`                                       | White                                               |
+| Bar color     | `Beatrun_HUDTextColor`                                       | `cl_weaponcolor`                                    |
+| Sway, dynamic | `Beatrun_HUDSway`, `Beatrun_HUDDynamic`                      | `Beatrun_AmmoHUDSway`, `Beatrun_AmmoHUDDynamic`     |
+| Hiding        | `Beatrun_HUDHidden`, build mode, large menus                 | Camera and `HUDShouldDraw`                          |
+| Health panel  | Above the level panel                                        | Bottom left corner, replaces the HL2 one            |
 | Settings      | BeatrunUI window                                             | Derma window and Utilities → User in the spawn menu |
 
 ## Settings
 
 Open with `beatrun_hud_settings` or from the context menu (C) → Beatrun HUD.
 
-| ConVar                   | Default | Description                                   |
-| ------------------------ | ------- | --------------------------------------------- |
-| `Beatrun_AmmoHUD`        | `1`     | Show the ammo counter                         |
-| `Beatrun_AmmoHUDKeys`    | `1`     | Show firemode and underbarrel key hints       |
-| `Beatrun_AmmoHUDHealth`  | `0`     | Show the health and armor panel               |
-| `Beatrun_AmmoHUDSway`    | `1`     | HUD sway (outside of Beatrun)                 |
+| ConVar                   | Default | Description                                    |
+| ------------------------ | ------- | ---------------------------------------------- |
+| `Beatrun_AmmoHUD`        | `1`     | Show the ammo counter                          |
+| `Beatrun_AmmoHUDKeys`    | `1`     | Show firemode and underbarrel key hints        |
+| `Beatrun_AmmoHUDHealth`  | `0`     | Show the health and armor panel                |
+| `Beatrun_AmmoHUDSway`    | `1`     | HUD sway (outside of Beatrun)                  |
 | `Beatrun_AmmoHUDDynamic` | `0`     | Fade the HUD while moving (outside of Beatrun) |
 
 ## Servers
@@ -46,4 +46,4 @@ Clients receive the Lua files automatically. Localization, the font and the heal
 
 ## Credits
 
-- [UnderSet/beatrunhud](https://gitlab.com/UnderSet/beatrunhud) - Forked from here.
+- [UnderSet/beatrunhud](https://gitlab.com/UnderSet/beatrunhud) - the original HUD this is forked from.

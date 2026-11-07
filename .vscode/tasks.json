@@ -1,0 +1,55 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Pack addon (gmad)",
+			"type": "process",
+			"command": "protontricks-launch",
+			"args": [
+				"--appid",
+				"4000",
+				"/mnt/hdd/SteamLibrary/steamapps/common/GarrysMod/bin/gmad.exe",
+				"create",
+				"-folder",
+				"Z:${workspaceFolder}",
+				"-out",
+				"Z:${workspaceFolder}/../beatrun-hud.gma",
+				"-warninvalid"
+			],
+			"problemMatcher": [],
+			"presentation": {
+				"panel": "shared",
+				"clear": true
+			}
+		},
+		{
+			"label": "Publish update (gmpublish)",
+			"type": "process",
+			"command": "protontricks-launch",
+			"args": [
+				"--appid",
+				"4000",
+				"/mnt/hdd/SteamLibrary/steamapps/common/GarrysMod/bin/gmpublish.exe",
+				"update",
+				"-id",
+				"12083719827391827391827398123",
+				"-addon",
+				"Z:${workspaceFolder}/../beatrun-hud.gma",
+				"-changes",
+				"${input:changes}"
+			],
+			"dependsOn": "Pack addon (gmad)",
+			"problemMatcher": [],
+			"presentation": {
+				"panel": "shared"
+			}
+		}
+	],
+	"inputs": [
+		{
+			"id": "changes",
+			"type": "promptString",
+			"description": "Update message for the Workshop (Esc to cancel)"
+		}
+	]
+}
