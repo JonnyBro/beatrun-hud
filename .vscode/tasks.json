@@ -32,7 +32,7 @@
 				"/mnt/hdd/SteamLibrary/steamapps/common/GarrysMod/bin/gmpublish.exe",
 				"update",
 				"-id",
-				"12083719827391827391827398123",
+				"3835381011",
 				"-addon",
 				"Z:${workspaceFolder}/../beatrun-hud.gma",
 				"-changes",
