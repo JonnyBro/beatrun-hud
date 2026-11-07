@@ -52,6 +52,9 @@ local function Call(wep, name, ...)
 	local fn = wep[name]
 
 	if isfunction(fn) then return fn(wep, ...) end
+
+	-- Explicit nil: tonumber() errors on zero arguments
+	return nil
 end
 
 local function ConVarBool(name)
@@ -239,19 +242,179 @@ local function GenericFiremode(wep)
 	return VANILLA_AUTOMATIC[wep:GetClass()] and Phrase("firemodes.auto") or Phrase("firemodes.semi")
 end
 
+-- Bases with attachments keep the real magazine size themselves, GetMaxClip1 only knows the default one
+local function BaseMaxClip1(wep, isArc9, isArcCW, isTFA)
+	local size
+
+	if isArc9 then
+		size = Call(wep, "GetProcessedValue", "ClipSize")
+	elseif isArcCW then
+		size = Call(wep, "GetCapacity")
+	elseif isTFA then
+		size = Call(wep, "GetStatL", "Primary.ClipSize")
+	end
+
+	size = tonumber(size)
+
+	if size and size > 0 then return size end
+end
+
+local CHAMBER_MAX = 2
+local clipSeen = setmetatable({}, { __mode = "k" })
+
+-- More rounds than magazine plus chamber means GetMaxClip1 is stale (extended mags on SWEPs
+-- that don't update Primary.ClipSize), so the largest clip seen becomes the magazine size
+local function AdaptiveMaxClip1(wep, clip1, maxClip1)
+	local seen = clipSeen[wep]
+
+	if seen and seen.base ~= maxClip1 then seen = nil end
+
+	if clip1 > maxClip1 + CHAMBER_MAX then
+		seen = seen or { base = maxClip1, max = 0 }
+		seen.max = math.max(seen.max, clip1)
+	end
+
+	clipSeen[wep] = seen
+
+	return seen and seen.max or maxClip1
+end
+
+-- Sandstorm SWEP Base keeps reserve as a list of magazines in a networked string,
+-- so engine ammo is 0 and Clip1 includes the chambered round
+
+local function SandSwepKeys(name)
+	local first = GetConVar("cl_sandswep_key_" .. name)
+	local second = GetConVar("cl_sandswep_key_" .. name .. "2")
+	local keys = {}
+
+	for _, cvar in ipairs({ first, second }) do
+		local key = cvar and cvar:GetString() or ""
+
+		if key ~= "" and key ~= "none" then keys[#keys + 1] = FormatKey(key) end
+	end
+
+	return #keys > 0 and keys or nil
+end
+
+local function SandSwepFiremode(wep)
+	local mode = Call(wep, "GetFireMode")
+
+	if mode == "safe" then return Phrase("firemodes.safety") end
+	if mode == "auto" then return Phrase("firemodes.auto") end
+	if mode == "burst" then return Phrase("firemodes.burst", wep.BurstCount or 3) end
+
+	return Phrase("firemodes.semi")
+end
+
+local function SandSwepInfo(wep)
+	local primary = {
+		mode = string.upper(SandSwepFiremode(wep)),
+		keys = SandSwepKeys("firemode")
+	}
+
+	local size = math.max(tonumber(Call(wep, "GetMagSize")) or wep:GetMaxClip1(), 1)
+	local grenades = tonumber(Call(wep, "GetGrenadeCount") or Call(wep, "CountCharges"))
+
+	if grenades then
+		primary.main = tostring(grenades)
+		primary.ratio = grenades > 0 and 1 or 0
+		primary.low = grenades == 0
+	elseif Call(wep, "PoolsAmmo") then
+		local clip = math.max(wep:Clip1(), 0)
+		local shown = math.min(clip, size)
+		local spare = tonumber(Call(wep, "GetSpareRounds")) or 0
+
+		primary.main = tostring(shown)
+		primary.over = clip > size and "+" .. (clip - size) or nil
+		primary.reserve = "/" .. spare
+		primary.reserveLow = spare == 0
+		primary.ratio = shown / size
+		primary.overRatio = math.min((clip - shown) / size, 1)
+		primary.low = shown < size / 3
+	else
+		local inserted = Call(wep, "HasMagInserted") ~= false
+		local rounds = inserted and math.max(tonumber(Call(wep, "GetRoundsInMag")) or 0, 0) or 0
+		local chambered = wep.ChamberRound and Call(wep, "IsChambered") and true or false
+		local mags = Call(wep, "GetMags") or {}
+		local ratio = math.min(rounds / size, 1)
+
+		primary.main = inserted and tostring(rounds) or "-"
+
+		if wep.HideExactAmmo and not Call(wep, "IsMagChecking") then
+			ratio = math.ceil(ratio * 4) / 4
+			primary.main = inserted and "~" .. math.Round(ratio * size) or "-"
+		end
+
+		primary.over = chambered and "+1" or nil
+		primary.overRatio = chambered and 1 / size or nil
+		primary.reserve = "×" .. #mags
+		primary.reserveLow = #mags == 0
+		primary.ratio = ratio
+		primary.low = rounds < size / 3
+	end
+
+	local glDef = Call(wep, "GetGLDef")
+	if not glDef then return primary end
+
+	local loaded = Call(wep, "GetGLLoaded") and 1 or 0
+	local glReserve = tonumber(Call(wep, "GetGLReserve")) or 0
+
+	local alt = {
+		mode = string.upper(glDef.GLName or glDef.Name or Phrase("altfire")),
+		keys = SandSwepKeys("gl"),
+		main = tostring(loaded),
+		reserve = "/" .. glReserve,
+		reserveLow = glReserve == 0,
+		ratio = loaded,
+		low = loaded == 0
+	}
+
+	return primary, alt, Call(wep, "GetGLMode") and true or false
+end
+
 local function GetWeaponInfo(ply, wep)
+	if wep.IsSandSwep then return SandSwepInfo(wep) end
+
 	local isArc9, isArcCW, isTFA, isMW = wep.ARC9, wep.ArcCW, wep.IsTFAWeapon, IsMWBase(wep)
+	local isGeneric = not (isArc9 or isArcCW or isTFA or isMW)
 
 	local ammoType1, ammoType2 = wep:GetPrimaryAmmoType(), wep:GetSecondaryAmmoType()
-	local clip1, maxClip1 = wep:Clip1(), wep:GetMaxClip1()
+	local clip1, maxClip1 = wep:Clip1(), BaseMaxClip1(wep, isArc9, isArcCW, isTFA) or wep:GetMaxClip1()
 	local reserve1 = math.max(ply:GetAmmoCount(ammoType1), 0)
+	local customAlt, customBottomless
 
-	local bottomless = maxClip1 <= 0
+	-- Standard SWEP hooks the default HUD reads; the big bases handle UBGL there, so only generic weapons use them
+	if isGeneric then
+		local custom = Call(wep, "CustomAmmoDisplay")
+
+		if istable(custom) then
+			if custom.Draw == false then return end
+
+			local customClip = tonumber(custom.PrimaryClip)
+
+			reserve1 = tonumber(custom.PrimaryAmmo) or reserve1
+			customAlt = tonumber(custom.SecondaryAmmo)
+
+			if customClip and customClip >= 0 then
+				clip1 = customClip
+			else
+				clip1 = 0
+				customBottomless = true
+			end
+		else
+			reserve1 = tonumber(Call(wep, "Ammo1")) or reserve1
+		end
+
+		if maxClip1 > 0 then maxClip1 = AdaptiveMaxClip1(wep, clip1, maxClip1) end
+	end
+
+	local bottomless = maxClip1 <= 0 or customBottomless
 		or isArc9 and Call(wep, "GetProcessedValue", "BottomlessClip", true) and true
-		or isArcCW and ConVarBool("arccw_mult_bottomlessclip")
+		or isArcCW and (Call(wep, "HasBottomlessClip") or ConVarBool("arccw_mult_bottomlessclip"))
 
+	-- ArcCW helpers also cover per-weapon flags and attachment overrides, not only the global cvars
 	local infinite = isArc9 and (Call(wep, "GetInfiniteAmmo") or ConVarBool("arc9_infinite_ammo"))
-		or isArcCW and ConVarBool("arccw_mult_infiniteammo")
+		or isArcCW and (Call(wep, "HasInfiniteAmmo") or ConVarBool("arccw_mult_infiniteammo"))
 
 	local mode, jammed, altActive, altName, modeKeys, altKeys
 
@@ -319,7 +482,12 @@ local function GetWeaponInfo(ply, wep)
 			keys = altKeys
 		}
 
-		if maxClip2 <= 0 or isArc9 and bottomless then
+		if customAlt then
+			reserve2 = math.max(customAlt, 0)
+			clip2 = 0
+		end
+
+		if maxClip2 <= 0 or customAlt or isArc9 and bottomless then
 			local total = reserve2 + math.max(clip2, 0)
 
 			alt.main = altInfinite and INF or tostring(total)
@@ -517,6 +685,7 @@ local function DrawAmmo(ply, wep, vp)
 	if wep:GetPrimaryAmmoType() == -1 then return end
 
 	local primary, alt, altActive = GetWeaponInfo(ply, wep)
+	if not primary then return end
 
 	local layout = AmmoLayout()
 	local h = layout.h
