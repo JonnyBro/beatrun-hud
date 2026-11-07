@@ -1,6 +1,8 @@
 local enabled = CreateClientConVar("Beatrun_AmmoHUD", "1", true, false, "Show the ammo counter", 0, 1)
 local showHealth = CreateClientConVar("Beatrun_AmmoHUDHealth", "0", true, false, "Show the health and armor panel", 0, 1)
 local showKeys = CreateClientConVar("Beatrun_AmmoHUDKeys", "1", true, false, "Show firemode and underbarrel key hints", 0, 1)
+local ownSway = CreateClientConVar("Beatrun_AmmoHUDSway", "1", true, false, "HUD sway outside of Beatrun", 0, 1)
+local ownDynamic = CreateClientConVar("Beatrun_AmmoHUDDynamic", "0", true, false, "Fade the HUD while moving outside of Beatrun", 0, 1)
 
 local INF = "∞"
 local ACCENT_FALLBACK = Color(235, 45, 45)
@@ -41,6 +43,11 @@ local function Phrase(key, ...)
 	return text
 end
 
+-- BeatrunUI exists only while the Beatrun gamemode is running; everything else falls back to GMod defaults
+local function InBeatrun()
+	return BeatrunUI ~= nil
+end
+
 local function S(px)
 	if BeatrunUI then return BeatrunUI.S(px) end
 
@@ -78,7 +85,40 @@ local function ConVarColor(name, fallback)
 	return cached.color
 end
 
+-- cl_playercolor / cl_weaponcolor are 0-1 vectors, and the weapon color default goes above 1 for the physgun glow
+local function VectorConVarColor(name, fallback, alpha)
+	local cvar = GetConVar(name)
+	local str = cvar and cvar:GetString() or fallback
+	local key = name .. alpha
+	local cached = colorCache[key]
+
+	if not cached or cached.str ~= str then
+		local vec = Vector(str)
+
+		cached = {
+			str = str,
+			color = Color(math.Clamp(vec.x * 255, 0, 255), math.Clamp(vec.y * 255, 0, 255), math.Clamp(vec.z * 255, 0, 255), alpha)
+		}
+		colorCache[key] = cached
+	end
+
+	return cached.color
+end
+
+-- Same look as the Beatrun HUD fonts, but owned here so the HUD works without the gamemode
 local function CreateFonts()
+	for name, scale in pairs({ BeatrunAmmoHUD_Text = 7, BeatrunAmmoHUD_Small = 6 }) do
+		surface.CreateFont(name, {
+			font = "x14y24pxHeadUpDaisy",
+			shadow = true,
+			antialias = false,
+			extended = true,
+			scanlines = 2,
+			weight = 500,
+			size = ScreenScale(scale)
+		})
+	end
+
 	local size = math.Round(36 * ScrH() / 1080)
 
 	for name, blursize in pairs({ BeatrunAmmoHUD_Big = 0, BeatrunAmmoHUD_BigGlow = 6 }) do
@@ -512,7 +552,7 @@ end
 -- Drawing
 
 local hidealpha = 0
-local textColor, cornerColor, accent
+local textColor, cornerColor, barColor, accent
 local textAlpha, cornerAlpha, outlineAlpha, blurAlpha
 
 local pulseStart = {}
@@ -549,7 +589,7 @@ end
 local function KeysWidth(keys)
 	if not keys or #keys == 0 or not showKeys:GetBool() then return 0 end
 
-	surface.SetFont("BeatrunHUDSmall")
+	surface.SetFont("BeatrunAmmoHUD_Small")
 
 	local plusW = surface.GetTextSize("+")
 	local w = 0
@@ -564,7 +604,7 @@ local function KeysWidth(keys)
 end
 
 local function DrawKeys(keys, x, cy, alpha)
-	surface.SetFont("BeatrunHUDSmall")
+	surface.SetFont("BeatrunAmmoHUD_Small")
 
 	local _, th = surface.GetTextSize("W")
 	local h = th + S(2)
@@ -572,7 +612,7 @@ local function DrawKeys(keys, x, cy, alpha)
 
 	for i, key in ipairs(keys) do
 		if i > 1 then
-			local plusW = draw.SimpleText("+", "BeatrunHUDSmall", x + S(2), cy, ColorAlpha(KEY_OUTLINE, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			local plusW = draw.SimpleText("+", "BeatrunAmmoHUD_Small", x + S(2), cy, ColorAlpha(KEY_OUTLINE, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 			x = x + plusW + S(4)
 		end
 
@@ -583,7 +623,7 @@ local function DrawKeys(keys, x, cy, alpha)
 		surface.SetDrawColor(KEY_OUTLINE.r, KEY_OUTLINE.g, KEY_OUTLINE.b, alpha)
 		surface.DrawOutlinedRect(x, y, w, h, 1)
 
-		draw.SimpleText(key, "BeatrunHUDSmall", x + w / 2, cy, ColorAlpha(textColor, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(key, "BeatrunAmmoHUD_Small", x + w / 2, cy, ColorAlpha(textColor, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 		x = x + w
 	end
@@ -593,10 +633,10 @@ local function AmmoContentWidth(info)
 	surface.SetFont("BeatrunAmmoHUD_Big")
 	local mainW = surface.GetTextSize(info.main)
 
-	surface.SetFont("BeatrunHUD")
+	surface.SetFont("BeatrunAmmoHUD_Text")
 	local reserveW = info.reserve and surface.GetTextSize(info.reserve) or 0
 
-	surface.SetFont("BeatrunHUDSmall")
+	surface.SetFont("BeatrunAmmoHUD_Small")
 	local overW = info.over and surface.GetTextSize(info.over) + S(2) or 0
 	local modeW = surface.GetTextSize(info.mode)
 
@@ -610,7 +650,7 @@ local function AmmoLayout()
 	surface.SetFont("BeatrunAmmoHUD_Big")
 	local _, bigH = surface.GetTextSize("0")
 
-	surface.SetFont("BeatrunHUDSmall")
+	surface.SetFont("BeatrunAmmoHUD_Small")
 	local _, smallH = surface.GetTextSize("W")
 
 	local pad = S(6)
@@ -646,11 +686,11 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey, layout)
 			Pulse(pulseKey .. "_reserve", false)
 		end
 
-		cursor = cursor - draw.SimpleText(info.reserve, "BeatrunHUD", cursor, y + layout.baseline, color, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+		cursor = cursor - draw.SimpleText(info.reserve, "BeatrunAmmoHUD_Text", cursor, y + layout.baseline, color, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
 	end
 
 	if info.over then
-		cursor = cursor - draw.SimpleText(info.over, "BeatrunHUDSmall", cursor, textTop + S(2), ColorAlpha(OVERFILL_COLOR, alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP) - S(2)
+		cursor = cursor - draw.SimpleText(info.over, "BeatrunAmmoHUD_Small", cursor, textTop + S(2), ColorAlpha(OVERFILL_COLOR, alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP) - S(2)
 	end
 
 	local pulse = Pulse(pulseKey, info.low)
@@ -666,7 +706,7 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey, layout)
 	surface.SetDrawColor(BAR_BG.r, BAR_BG.g, BAR_BG.b, alpha)
 	surface.DrawRect(barX, barY + 1, barW, S(4))
 
-	surface.SetDrawColor(info.low and lowColor or baseColor)
+	surface.SetDrawColor(info.low and lowColor or ColorAlpha(barColor, alpha))
 	surface.DrawRect(barX, barY, barW * info.ratio, S(5))
 
 	if info.overRatio and info.overRatio > 0 then
@@ -676,7 +716,7 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey, layout)
 
 	local rowCY = y + layout.rowCY
 
-	draw.SimpleText(info.mode, "BeatrunHUDSmall", right, rowCY, info.jammed and lowColor or baseColor, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+	draw.SimpleText(info.mode, "BeatrunAmmoHUD_Small", right, rowCY, info.jammed and lowColor or baseColor, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
 	if info.keys and #info.keys > 0 and showKeys:GetBool() then DrawKeys(info.keys, left, rowCY, alpha) end
 end
@@ -727,11 +767,11 @@ local function DrawHealth(ply, vp)
 	local hpText = Phrase("health") .. " " .. hp
 	local apText = Phrase("armor") .. " " .. ap
 
-	surface.SetFont("BeatrunHUD")
+	surface.SetFont("BeatrunAmmoHUD_Text")
 	local hpW, textH = surface.GetTextSize(hpText)
 	local apW = surface.GetTextSize(apText)
 
-	surface.SetFont("BeatrunHUDSmall")
+	surface.SetFont("BeatrunAmmoHUD_Small")
 	local _, smallH = surface.GetTextSize("W")
 
 	local icon = math.max(S(16), smallH)
@@ -756,7 +796,8 @@ local function DrawHealth(ply, vp)
 	local h = barY + S(9) + S(5) + pad
 
 	local x = 20 + vp.z
-	local y = ScrH() * 0.895 + vp.x - S(8) - h
+	-- In Beatrun the level panel takes the bottom left corner, so health sits above it
+	local y = InBeatrun() and ScrH() * 0.895 + vp.x - S(8) - h or ScrH() * 0.895 + S(85) - h + vp.x
 	local left, right = x + inset, x + w - inset
 	local rowCY = y + pad + textH / 2
 
@@ -766,9 +807,10 @@ local function DrawHealth(ply, vp)
 	local baseColor = ColorAlpha(textColor, textAlpha)
 	local hpLow = hpRatio <= 1 / 3
 	local hpColor = hpLow and ColorAlpha(accent, textAlpha) or baseColor
+	local hpBarColor = hpLow and hpColor or ColorAlpha(barColor, textAlpha)
 
-	draw.SimpleText(hpText, "BeatrunHUD", left, rowCY, hpColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-	draw.SimpleText(apText, "BeatrunHUD", right, rowCY, ColorAlpha(textColor, ap > 0 and textAlpha or textAlpha * 0.45), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+	draw.SimpleText(hpText, "BeatrunAmmoHUD_Text", left, rowCY, hpColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+	draw.SimpleText(apText, "BeatrunAmmoHUD_Text", right, rowCY, ColorAlpha(textColor, ap > 0 and textAlpha or textAlpha * 0.45), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
 	local cursor = left + hpW + gap
 
@@ -777,7 +819,7 @@ local function DrawHealth(ply, vp)
 		surface.SetDrawColor(255, 255, 255, textAlpha)
 		surface.DrawTexturedRect(cursor, math.Round(rowCY - icon / 2), icon, icon)
 
-		draw.SimpleText(extra.text, "BeatrunHUDSmall", cursor + icon + S(4), rowCY, baseColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		draw.SimpleText(extra.text, "BeatrunAmmoHUD_Small", cursor + icon + S(4), rowCY, baseColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
 		cursor = cursor + extra.w + gap
 	end
@@ -788,7 +830,7 @@ local function DrawHealth(ply, vp)
 
 	surface.SetDrawColor(BAR_BG.r, BAR_BG.g, BAR_BG.b, textAlpha)
 	surface.DrawRect(left, barY + 1, barW, S(4))
-	surface.SetDrawColor(hpColor)
+	surface.SetDrawColor(hpBarColor)
 	surface.DrawRect(left, barY, barW * math.Clamp(hpRatio, 0, 1), S(5))
 
 	if hpRatio > 1 then
@@ -810,9 +852,14 @@ local function DrawHealth(ply, vp)
 end
 
 local function ShouldDraw(ply)
-	if not BeatrunUI or BuildMode then return false end
+	if BuildMode then return false end
 	if not IsValid(ply) or not ply:Alive() then return false end
 	if ply:InVehicle() and not ply:GetAllowWeaponsInVehicle() then return false end
+
+	-- Lets the camera SWEP and gamemodes hide the HUD like any other element
+	if hook.Run("HUDShouldDraw", "BeatrunAmmoHUD") == false then return false end
+
+	if not InBeatrun() then return true end
 
 	local hidden = GetConVar("Beatrun_HUDHidden")
 	if hidden and hidden:GetInt() > 0 then return false end
@@ -822,14 +869,9 @@ local function ShouldDraw(ply)
 	return hook.Run("BeatrunDrawHUD") ~= false
 end
 
-hook.Add("HUDPaint", "BeatrunAmmoHUD", function()
-	local drawAmmo, drawHealth = enabled:GetBool(), showHealth:GetBool()
-	if not drawAmmo and not drawHealth then return end
-
-	local ply = LocalPlayer()
-	if not ShouldDraw(ply) then return end
-
-	local dynamic = ConVarBool("Beatrun_HUDDynamic")
+local function UpdateStyle(ply)
+	local beatrun = InBeatrun()
+	local dynamic = beatrun and ConVarBool("Beatrun_HUDDynamic") or not beatrun and ownDynamic:GetBool()
 
 	if dynamic then
 		hidealpha = math.Approach(hidealpha, 150 * ply:GetVelocity():Length() / 250, 100 * RealFrameTime())
@@ -837,18 +879,37 @@ hook.Add("HUDPaint", "BeatrunAmmoHUD", function()
 		hidealpha = 0
 	end
 
-	textColor = ConVarColor("Beatrun_HUDTextColor", "255 255 255 255")
-	cornerColor = ConVarColor("Beatrun_HUDCornerColor", "20 20 20 100")
-	accent = BEATRUN_ACCENT or ACCENT_FALLBACK
+	if beatrun then
+		textColor = ConVarColor("Beatrun_HUDTextColor", "255 255 255 255")
+		cornerColor = ConVarColor("Beatrun_HUDCornerColor", "20 20 20 100")
+		barColor = textColor
+		accent = BEATRUN_ACCENT or ACCENT_FALLBACK
+	else
+		textColor = color_white
+		cornerColor = VectorConVarColor("cl_playercolor", "0.24 0.34 0.41", 100)
+		barColor = VectorConVarColor("cl_weaponcolor", "0.30 1.80 2.10", 255)
+		accent = ACCENT_FALLBACK
+	end
 
 	textAlpha = dynamic and math.max(255 - hidealpha, 2) or textColor.a
 	cornerAlpha = dynamic and math.max(150 - hidealpha, 50) or math.Clamp(cornerColor.a + 50, 0, 255)
 	outlineAlpha = dynamic and math.max(100 - hidealpha, 50) or cornerColor.a
 	blurAlpha = math.max(255 - hidealpha, 2)
 
+	return beatrun and ConVarBool("Beatrun_HUDSway") or not beatrun and ownSway:GetBool()
+end
+
+hook.Add("HUDPaint", "BeatrunAmmoHUD", function()
+	local drawAmmo, drawHealth = enabled:GetBool(), showHealth:GetBool()
+	if not drawAmmo and not drawHealth then return end
+
+	local ply = LocalPlayer()
+	if not ShouldDraw(ply) then return end
+
+	local sway = UpdateStyle(ply)
 	local vp = ply.GetSmoothViewPunchAngles and ply:GetSmoothViewPunchAngles() or ply:GetViewPunchAngles()
 
-	if not ConVarBool("Beatrun_HUDSway") then
+	if not sway then
 		vp.x = 0
 		vp.z = 0
 	end
@@ -859,13 +920,20 @@ hook.Add("HUDPaint", "BeatrunAmmoHUD", function()
 	if drawHealth then DrawHealth(ply, vp) end
 end)
 
-local hideHL2 = {
+local hideAmmo = {
 	CHudAmmo = true,
 	CHudSecondaryAmmo = true
 }
 
+-- Beatrun already hides these itself
+local hideHealth = {
+	CHudHealth = true,
+	CHudBattery = true
+}
+
 hook.Add("HUDShouldDraw", "BeatrunAmmoHUD_HideHL2", function(name)
-	if hideHL2[name] and BeatrunUI and enabled:GetBool() then return false end
+	if hideAmmo[name] and enabled:GetBool() then return false end
+	if hideHealth[name] and showHealth:GetBool() then return false end
 end)
 
 -- Settings
@@ -873,7 +941,9 @@ end)
 local SETTINGS = {
 	{ convar = "Beatrun_AmmoHUD", label = "#beatrunhud.settings.ammo", desc = "#beatrunhud.settings.ammodesc" },
 	{ convar = "Beatrun_AmmoHUDKeys", label = "#beatrunhud.settings.keys", desc = "#beatrunhud.settings.keysdesc" },
-	{ convar = "Beatrun_AmmoHUDHealth", label = "#beatrunhud.settings.health", desc = "#beatrunhud.settings.healthdesc" }
+	{ convar = "Beatrun_AmmoHUDHealth", label = "#beatrunhud.settings.health", desc = "#beatrunhud.settings.healthdesc" },
+	{ convar = "Beatrun_AmmoHUDSway", label = "#beatrunhud.settings.sway", desc = "#beatrunhud.settings.swaydesc", standalone = true },
+	{ convar = "Beatrun_AmmoHUDDynamic", label = "#beatrunhud.settings.dynamic", desc = "#beatrunhud.settings.dynamicdesc", standalone = true }
 }
 
 local settingsFrame
@@ -886,21 +956,7 @@ local function Description(UI, body, text, indent)
 	hint:SetAutoStretchVertical(true)
 end
 
-local function OpenSettings()
-	if IsValid(settingsFrame) then
-		settingsFrame:Remove()
-
-		return
-	end
-
-	local UI = BeatrunUI
-
-	if not UI then
-		print(Phrase("notbeatrun"))
-
-		return
-	end
-
+local function BuildBeatrunSettings(UI)
 	settingsFrame = UI.MakeWindow("#beatrunhud.settings.title", S(560), S(520))
 
 	local body = UI.MakeScroll(settingsFrame):GetCanvas()
@@ -909,6 +965,8 @@ local function OpenSettings()
 	UI.MakeTitle(body, "#beatrunhud.settings.display")
 
 	for _, item in ipairs(SETTINGS) do
+		if item.standalone then continue end
+
 		local check = vgui.Create("DCheckBoxLabel", body)
 		check:SetText(item.label)
 		check:SetFont("BeatrunUI")
@@ -933,11 +991,58 @@ local function OpenSettings()
 	end
 end
 
+local function FillForm(form)
+	for _, item in ipairs(SETTINGS) do
+		form:CheckBox(item.label, item.convar)
+		form:ControlHelp(item.desc)
+	end
+
+	form:Help("#beatrunhud.settings.colorsdesc")
+end
+
+local function BuildDermaSettings()
+	settingsFrame = vgui.Create("DFrame")
+	settingsFrame:SetTitle("#beatrunhud.settings.title")
+	settingsFrame:SetSize(S(420), S(420))
+	settingsFrame:Center()
+	settingsFrame:MakePopup()
+
+	local scroll = vgui.Create("DScrollPanel", settingsFrame)
+	scroll:Dock(FILL)
+
+	local form = vgui.Create("DForm", scroll)
+	form:Dock(TOP)
+	form:SetName("#beatrunhud.settings.display")
+
+	FillForm(form)
+end
+
+local function OpenSettings()
+	if IsValid(settingsFrame) then
+		settingsFrame:Remove()
+
+		return
+	end
+
+	if InBeatrun() then
+		BuildBeatrunSettings(BeatrunUI)
+	else
+		BuildDermaSettings()
+	end
+end
+
 concommand.Add("beatrun_hud_settings", OpenSettings)
+
+hook.Add("PopulateToolMenu", "BeatrunAmmoHUD_Settings", function()
+	spawnmenu.AddToolMenuOption("Utilities", "User", "BeatrunAmmoHUD", "#beatrunhud.settings.title", "", "", function(form)
+		form:ClearControls()
+		FillForm(form)
+	end)
+end)
 
 list.Set("DesktopWindows", "BeatrunAmmoHUDSettings", {
 	title = "#beatrunhud.settings.desktop",
-	icon = "vgui/melogo.png",
+	icon = engine.ActiveGamemode() == "beatrun" and "vgui/melogo.png" or "icon64/tool.png",
 	width = 1,
 	height = 1,
 	onewindow = false,
