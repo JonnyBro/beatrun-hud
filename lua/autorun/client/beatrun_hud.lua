@@ -437,18 +437,36 @@ local function AmmoContentWidth(info)
 	return math.max(S(150), mainW + overW + reserveW, modeW + (keysW > 0 and keysW + S(10) or 0))
 end
 
-local function DrawAmmoInfo(info, x, y, w, active, pulseKey)
+-- Beatrun fonts scale with screen width and S() with height, so rows are stacked from measured font heights
+local function AmmoLayout()
+	surface.SetFont("BeatrunAmmoHUD_Big")
+	local _, bigH = surface.GetTextSize("0")
+
+	surface.SetFont("BeatrunHUDSmall")
+	local _, smallH = surface.GetTextSize("W")
+
+	local pad = S(6)
+	local barY = pad + bigH + S(4)
+	local rowY = barY + S(9)
+	local rowH = smallH + S(2)
+
+	return {
+		textTop = pad,
+		baseline = pad + bigH - S(3),
+		barY = barY,
+		rowCY = rowY + rowH / 2,
+		h = math.max(S(85), rowY + rowH + pad)
+	}
+end
+
+local function DrawAmmoInfo(info, x, y, w, active, pulseKey, layout)
 	local inset = S(10)
 	local left, right = x + inset, x + w - inset
 	local alpha = active and textAlpha or textAlpha * 0.45
 	local baseColor = ColorAlpha(textColor, alpha)
 	local lowColor = ColorAlpha(accent, alpha)
 
-	surface.SetFont("BeatrunAmmoHUD_Big")
-
-	local textTop = y + S(4)
-	local _, bigH = surface.GetTextSize(info.main)
-	local baseline = textTop + bigH - S(3)
+	local textTop = y + layout.textTop
 	local cursor = right
 
 	if info.reserve then
@@ -460,7 +478,7 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey)
 			Pulse(pulseKey .. "_reserve", false)
 		end
 
-		cursor = cursor - draw.SimpleText(info.reserve, "BeatrunHUD", cursor, baseline, color, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+		cursor = cursor - draw.SimpleText(info.reserve, "BeatrunHUD", cursor, y + layout.baseline, color, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
 	end
 
 	if info.over then
@@ -475,7 +493,7 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey)
 
 	local barW = math.min(S(150), w - inset * 2)
 	local barX = right - barW
-	local barY = y + S(49)
+	local barY = y + layout.barY
 
 	surface.SetDrawColor(BAR_BG.r, BAR_BG.g, BAR_BG.b, alpha)
 	surface.DrawRect(barX, barY + 1, barW, S(4))
@@ -488,10 +506,7 @@ local function DrawAmmoInfo(info, x, y, w, active, pulseKey)
 		surface.DrawRect(barX, barY + S(5), barW * info.overRatio, S(2))
 	end
 
-	surface.SetFont("BeatrunHUDSmall")
-
-	local _, smallH = surface.GetTextSize("W")
-	local rowCY = y + S(59) + smallH / 2
+	local rowCY = y + layout.rowCY
 
 	draw.SimpleText(info.mode, "BeatrunHUDSmall", right, rowCY, info.jammed and lowColor or baseColor, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
@@ -503,17 +518,18 @@ local function DrawAmmo(ply, wep, vp)
 
 	local primary, alt, altActive = GetWeaponInfo(ply, wep)
 
-	local scrw, scrh = ScrW(), ScrH()
-	local h = S(85)
-	local y = scrh * 0.895 + vp.x
-	local right = scrw - 20 + vp.z
+	local layout = AmmoLayout()
+	local h = layout.h
+	-- Bottom stays where the Beatrun level panel ends, extra height grows upwards
+	local y = ScrH() * 0.895 + S(85) - h + vp.x
+	local right = ScrW() - 20 + vp.z
 
 	local w = AmmoContentWidth(primary) + S(10) * 2
 	local x = right - w
 
 	DrawCorner(right, y, h)
 	DrawPanelBox(x, y, w, h)
-	DrawAmmoInfo(primary, x, y, w, not altActive, "primary")
+	DrawAmmoInfo(primary, x, y, w, not altActive, "primary", layout)
 
 	if not alt then return end
 
@@ -521,63 +537,89 @@ local function DrawAmmo(ply, wep, vp)
 	local altX = x - S(8) - altW
 
 	DrawPanelBox(altX, y, altW, h)
-	DrawAmmoInfo(alt, altX, y, altW, altActive, "alt")
+	DrawAmmoInfo(alt, altX, y, altW, altActive, "alt", layout)
 end
 
 local function DrawHealth(ply, vp)
-	local scrh = ScrH()
 	local hp, ap = ply:Health(), ply:Armor()
 	local hpRatio = hp / math.max(ply:GetMaxHealth(), 1)
 	local apRatio = ap / math.max(ply:GetMaxArmor(), 1)
 
-	local w, h = S(220), S(52)
-	local x = 20 + vp.z
-	local y = scrh * 0.895 + vp.x - S(8) - h
+	local extras = {}
+
+	if ply.GetStims then extras[#extras + 1] = { mat = healthpack, count = ply:GetStims() } end
+
+	if ply.GetArmorPlates then
+		extras[#extras + 1] = { mat = armorplate, count = ply:GetArmorPlates() }
+	elseif GetConVar("wz_armorsys_armorplates_maxcarry") then
+		extras[#extras + 1] = { mat = armorplate, count = ply:GetAmmoCount("WZ_ARMORPLATE") }
+	end
+
+	local hpText = Phrase("health") .. " " .. hp
+	local apText = Phrase("armor") .. " " .. ap
+
+	surface.SetFont("BeatrunHUD")
+	local hpW, textH = surface.GetTextSize(hpText)
+	local apW = surface.GetTextSize(apText)
+
+	surface.SetFont("BeatrunHUDSmall")
+	local _, smallH = surface.GetTextSize("W")
+
+	local icon = math.max(S(16), smallH)
+	local gap = S(16)
+	local rowW = hpW + gap + apW
+	local shown = {}
+
+	for _, extra in ipairs(extras) do
+		-- Icons come from resource.AddFile and may be missing if the server has downloads disabled
+		if extra.mat:IsError() then continue end
+
+		extra.text = tostring(extra.count)
+		extra.w = icon + S(4) + surface.GetTextSize(extra.text)
+		rowW = rowW + extra.w + gap
+		shown[#shown + 1] = extra
+	end
+
 	local inset = S(10)
+	local pad = S(6)
+	local w = math.max(S(220), rowW + inset * 2)
+	local barY = pad + textH + S(4)
+	local h = barY + S(9) + S(5) + pad
+
+	local x = 20 + vp.z
+	local y = ScrH() * 0.895 + vp.x - S(8) - h
 	local left, right = x + inset, x + w - inset
+	local rowCY = y + pad + textH / 2
 
 	DrawCorner(-20 + vp.z, y, h)
 	DrawPanelBox(x, y, w, h)
 
 	local baseColor = ColorAlpha(textColor, textAlpha)
 	local hpLow = hpRatio <= 1 / 3
+	local hpColor = hpLow and ColorAlpha(accent, textAlpha) or baseColor
 
-	draw.SimpleText(Phrase("health") .. " " .. hp, "BeatrunHUD", left, y + S(5), hpLow and ColorAlpha(accent, textAlpha) or baseColor)
+	draw.SimpleText(hpText, "BeatrunHUD", left, rowCY, hpColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+	draw.SimpleText(apText, "BeatrunHUD", right, rowCY, ColorAlpha(textColor, ap > 0 and textAlpha or textAlpha * 0.45), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
-	local apColor = ColorAlpha(textColor, ap > 0 and textAlpha or textAlpha * 0.45)
-	local cursor = right - draw.SimpleText(Phrase("armor") .. " " .. ap, "BeatrunHUD", right, y + S(5), apColor, TEXT_ALIGN_RIGHT) - S(10)
+	local cursor = left + hpW + gap
 
-	local extras = {}
-
-	if ply.GetStims then extras[#extras + 1] = { healthpack, ply:GetStims() } end
-
-	if ply.GetArmorPlates then
-		extras[#extras + 1] = { armorplate, ply:GetArmorPlates() }
-	elseif GetConVar("wz_armorsys_armorplates_maxcarry") then
-		extras[#extras + 1] = { armorplate, ply:GetAmmoCount("WZ_ARMORPLATE") }
-	end
-
-	local icon = S(16)
-
-	for _, extra in ipairs(extras) do
-		-- Icons come from resource.AddFile and may be missing if the server has downloads disabled
-		if extra[1]:IsError() then continue end
-
-		local countW = draw.SimpleText(tostring(extra[2]), "BeatrunHUDSmall", cursor, y + S(7), baseColor, TEXT_ALIGN_RIGHT)
-
-		surface.SetMaterial(extra[1])
+	for _, extra in ipairs(shown) do
+		surface.SetMaterial(extra.mat)
 		surface.SetDrawColor(255, 255, 255, textAlpha)
-		surface.DrawTexturedRect(cursor - countW - S(4) - icon, y + S(7), icon, icon)
+		surface.DrawTexturedRect(cursor, math.Round(rowCY - icon / 2), icon, icon)
 
-		cursor = cursor - countW - S(4) - icon - S(10)
+		draw.SimpleText(extra.text, "BeatrunHUDSmall", cursor + icon + S(4), rowCY, baseColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+		cursor = cursor + extra.w + gap
 	end
 
 	local barW = right - left
-	local barY = y + S(33)
+
+	barY = y + barY
 
 	surface.SetDrawColor(BAR_BG.r, BAR_BG.g, BAR_BG.b, textAlpha)
 	surface.DrawRect(left, barY + 1, barW, S(4))
-	surface.SetDrawColor(hpLow and ColorAlpha(accent, textAlpha) or baseColor)
+	surface.SetDrawColor(hpColor)
 	surface.DrawRect(left, barY, barW * math.Clamp(hpRatio, 0, 1), S(5))
 
 	if hpRatio > 1 then
@@ -585,7 +627,7 @@ local function DrawHealth(ply, vp)
 		surface.DrawRect(left, barY + S(5), barW * math.min(hpRatio - 1, 1), S(2))
 	end
 
-	barY = y + S(42)
+	barY = barY + S(9)
 
 	surface.SetDrawColor(BAR_BG.r, BAR_BG.g, BAR_BG.b, textAlpha)
 	surface.DrawRect(left, barY, barW, S(3))
